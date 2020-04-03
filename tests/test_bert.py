@@ -53,8 +53,16 @@ class TestBERT(unittest.TestCase):
         )
         compile_model(model)
         data = model.to_json()
+        # 保存模型到json文件
+        with open('./model.json', 'w') as file:
+            file.write(data)
         set_custom_objects()
-        model = keras.models.model_from_json(data)
+        # # 从json对象中加载模型
+        # model = keras.models.model_from_json(data)
+        # 从json文件中加载模型
+        with open('./model.json', 'r') as file:
+            model_json = file.read()
+        model = keras.models.model_from_json(model_json)
         model.summary()
 
     def test_get_token_embedding(self):

@@ -12,7 +12,7 @@ seqence_len = 26  #有效的ap数量
 pretrain_datafile_name = "..\\data\\sampleset_data\\trainset_day20-1-8_points20_average_interval_500ms.csv"
 train_datafile_name = "..\\data\\sampleset_data\\trainset_day20-1-8_points20_average_interval_500ms.csv"
 flag_retrain = True
-MODEL_DIR = "..\\indoor_location\\model\\"
+MODEL_DIR = "..\\model\\"
 pretrained_model_path = MODEL_DIR + "pretrained_bert1.h5"
 trained_model_path = MODEL_DIR + "trained_bert1.h5"
 

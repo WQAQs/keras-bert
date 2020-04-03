@@ -173,6 +173,9 @@ def get_model(token_num,
             transformed = outputs[0]
         return inputs, transformed
 
+
+
+
 def mytest_get_model(token_num,
               pos_num=512,
               seq_len=512,
