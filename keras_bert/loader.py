@@ -16,6 +16,7 @@ __all__ = [
 def checkpoint_loader(checkpoint_file):
     def _loader(name):
         return tf.train.load_variable(checkpoint_file, name)
+        # return keras.## !!!我更改的！！
     return _loader
 
 
@@ -43,14 +44,27 @@ def build_model_from_config(config_file,
         config['max_position_embeddings'] = seq_len = min(seq_len, config['max_position_embeddings'])
     if trainable is None:
         trainable = training
+    # model = get_model(
+    #     token_num=129,
+    #     pos_num=26,
+    #     seq_len=26,
+    #     embed_dim=12,
+    #     transformer_num=2,
+    #     head_num=2,
+    #     feed_forward_dim=100,
+
+    #     dropout_rate=0.05,
+    #     attention_activation='gelu',
+    # )
     model = get_model(
-        token_num=config['vocab_size'],
-        pos_num=config['max_position_embeddings'],
-        seq_len=seq_len,
-        embed_dim=config['hidden_size'],
-        transformer_num=config['num_hidden_layers'],
-        head_num=config['num_attention_heads'],
-        feed_forward_dim=config['intermediate_size'],
+        token_num=config['vocab_size'],  #     token_num=129,
+        pos_num=config['max_position_embeddings'], #     pos_num=26,
+        seq_len=seq_len,#     seq_len=26,
+        embed_dim=config['hidden_size'],  #     embed_dim=12,
+        transformer_num=config['num_hidden_layers'], #     transformer_num=2,
+        head_num=config['num_attention_heads'], #     head_num=2,
+        feed_forward_dim=config['intermediate_size'], #     feed_forward_dim=100,
+
         feed_forward_activation=config['hidden_act'],
         training=training,
         trainable=trainable,
@@ -169,6 +183,7 @@ def load_trained_model_from_checkpoint(config_file,
         **kwargs)
     load_model_weights_from_checkpoint(model, config, checkpoint_file, training=training)
     return model
+
 
 
 def load_vocabulary(vocab_path):

@@ -22,7 +22,11 @@ TOKEN_CLS = '[CLS]'  # Token for classification
 TOKEN_SEP = '[SEP]'  # Token for separation
 TOKEN_MASK = '[MASK]'  # Token for masking
 
-
+# feed_forward_dim = 3072,
+# feed_forward_activation = 'gelu',
+# training = True,
+# trainable = None,
+# output_layer_num = output_layer_num,
 def get_model(token_num,
               pos_num=512,
               seq_len=512,

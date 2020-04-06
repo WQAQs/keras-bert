@@ -276,8 +276,8 @@ from keras_bert import load_trained_model_from_checkpoint
 layer_num = 12
 checkpoint_path = '.../uncased_L-12_H-768_A-12'
 
-config_path = os.path.join(checkpoint_path, 'bert_config.json')
-model_path = os.path.join(checkpoint_path, 'bert_model.ckpt')
+config_path = os.path.join(checkpoint_path, mybert_config.json)
+model_path = os.path.join(checkpoint_path, mybert_model.ckpt)
 model = load_trained_model_from_checkpoint(
     config_path,
     model_path,

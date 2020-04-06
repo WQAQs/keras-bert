@@ -25,8 +25,8 @@ POOL_AVE = 'POOL_AVE'
 
 def get_checkpoint_paths(model_path):
     CheckpointPaths = namedtuple('CheckpointPaths', ['config', 'checkpoint', 'vocab'])
-    config_path = os.path.join(model_path, 'bert_config.json')
-    checkpoint_path = os.path.join(model_path, 'bert_model.ckpt')
+    config_path = os.path.join(model_path, 'mybert_config.json')
+    checkpoint_path = os.path.join(model_path, 'mybert_model.ckpt')
     vocab_path = os.path.join(model_path, 'vocab.txt')
     return CheckpointPaths(config_path, checkpoint_path, vocab_path)
 
