@@ -26,4 +26,6 @@ class Extract(keras.layers.Layer):
         return None
 
     def call(self, x, mask=None):
+        self.index
+        t = x[:, self.index]
         return x[:, self.index]

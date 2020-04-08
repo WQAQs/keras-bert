@@ -40,6 +40,7 @@ value = (X - h_est) ** 2 + v_est                         #拟合的曲线
 loss = tf.reduce_mean(tf.square(value - Y))
 optimizer = tf.train.AdamOptimizer(learning_rate=0.01).minimize(loss)
 
+
 init = tf.global_variables_initializer()
 
 with tf.Session() as sess:

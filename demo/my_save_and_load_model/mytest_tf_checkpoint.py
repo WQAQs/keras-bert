@@ -21,12 +21,12 @@ def create_model():
     keras.layers.Dense(10)
   ])
   batch_size,num_classes = train_labels.shape[0], 10
-  # model.compile(optimizer='adam',
-  #               loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
-  #               metrics=['accuracy'])
   model.compile(optimizer='adam',
-                loss=tf.losses.sparse_softmax_cross_entropy(logits=[batch_size, num_classes], labels=[batch_size, ]),
+                loss=keras.losses.sparse_categorical_crossentropy,
                 metrics=['accuracy'])
+  # model.compile(optimizer='adam',
+  #               loss=tf.losses.sparse_softmax_cross_entropy(logits=[batch_size, num_classes], labels=[batch_size, ]),
+  #               metrics=['accuracy'])
 
   return model
 
@@ -36,12 +36,11 @@ model = create_model()
 # Display the model's architecture
 model.summary()
 
-checkpoint_path = "training_1/cp.ckpt"
+checkpoint_path = "logs/cp.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 
 # Create a callback that saves the model's weights
 cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-                                                 save_weights_only=True,
                                                  verbose=1)
 
 # Train the model with the new callback

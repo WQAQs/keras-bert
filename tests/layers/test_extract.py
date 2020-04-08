@@ -12,7 +12,7 @@ class TestExtract(unittest.TestCase):
             name='Input',
         )
         extract_layer = Extract(
-            index=0,
+            index=1,
             name='Extract'
         )(input_layer)
         model = keras.models.Model(
