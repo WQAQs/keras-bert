@@ -11,7 +11,7 @@ TOKEN_MASK = '[MASK]'  # Token for masking
 
 def load_dataset(dataset_file):
     dataset = pd.read_csv(dataset_file)
-    dataset = dataset[:1000]  ###  ！！！！！！！！！！！ 调整一个batch使用的样本数量！！！！！！！！！！！！！
+    dataset = dataset[:6000]  ###  ！！！！！！！！！！！ 调整一个batch使用的样本数量！！！！！！！！！！！！！
     reference_tags = dataset.values[:, 0]
     # data_input = data_input.reshape(data_input.shape[0],data_input.shape[1],1)
     coordinates = dataset.values[:, 1:3] #包括index=1，不包括index=3

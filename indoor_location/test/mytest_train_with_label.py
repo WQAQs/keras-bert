@@ -26,10 +26,10 @@ checkpoint_path = os.path.join(pretrained_path, 'mybert_model.ckpt')
 # checkpoint_path = 'mybert_model.ckpt'
 flag_retrain = True
 LR = 0.001
-EPOCHS = 1
+EPOCHS = 10
 BATCH_SIZE = 128
 
-def indoorlocation_train_bert_with_label():
+def bert_indoorlocation_train_with_label():
     config = tf.ConfigProto(allow_soft_placement=True)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     config.gpu_options.allow_growth = True
@@ -88,7 +88,6 @@ def indoorlocation_train_bert_with_label():
     # output_layer = model.inputs[:2]
     # dense = model.get_layer('Encoder-2-FeedForward-Norm').output
     # output_layer = keras.layers.Dense(units=2, activation='relu')(dense)
-    embed_dim = 12  #"hidden_size",
     extract_layer = Extract(index=0, name='Extract')(transformed)
     # coor_dense = keras.layers.Dense(units=embed_dim, activation="relu", name="coor_dense")(transformed)
     output_layer = keras.layers.Dense(units=2, activation="relu", name="coor_output")(extract_layer)
@@ -115,5 +114,5 @@ def indoorlocation_train_bert_with_label():
     # predicts = list(map(lambda x: np.argmax(x, axis=-1), predicts))
     # predicts
 
-indoorlocation_train_bert_with_label()
+bert_indoorlocation_train_with_label()
 

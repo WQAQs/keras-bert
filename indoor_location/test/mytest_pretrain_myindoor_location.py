@@ -6,13 +6,13 @@ from keras_bert.backend import backend as K
 from keras_bert import (get_model, compile_model, get_base_dict, gen_batch_inputs, get_token_embedding,
                         get_custom_objects, set_custom_objects,load_trained_model_from_checkpoint,build_model_from_config)
 from indoor_location.utils import get_sentence_pairs
-from keras_bert.optimizers import AdamWarmup
-from sklearn.preprocessing import LabelBinarizer
-from keras.applications.vgg16 import VGG16
-from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.optimizers import SGD
-from keras.datasets import cifar10
-from tensorflow.python.keras.callbacks import ModelCheckpoint
+# from keras_bert.optimizers import AdamWarmup
+# from sklearn.preprocessing import LabelBinarizer
+# from keras.applications.vgg16 import VGG16
+# from keras.callbacks import ModelCheckpoint, TensorBoard
+# from keras.optimizers import SGD
+# from keras.datasets import cifar10
+# from tensorflow.python.keras.callbacks import ModelCheckpoint
 
 seqence_len = 26  #有效的ap数量
 pretrain_datafile_name = "..\\data\\sampleset_data\\trainset_day20-1-8_points20_average_interval_500ms.csv"
@@ -26,10 +26,9 @@ config_path = os.path.join(pretrained_path, 'mybert_config.json')
 checkpoint_path = os.path.join(pretrained_path, 'mybert_model.ckpt')
 checkpoint_dir = os.path.dirname(checkpoint_path)
 
-epochs = 2
 
 
-def bert_indoorlocation_fit():
+def bert_indoorlocation_pretrain():
     # 准备训练集数据和验证集数据
     sentence_pairs = get_sentence_pairs(pretrain_datafile_name)
     token_dict = get_base_dict()
@@ -45,7 +44,7 @@ def bert_indoorlocation_fit():
         token_list,
         seq_len=seqence_len,
         mask_rate=0.3,
-        swap_sentence_rate=1.0,
+        swap_sentence_rate=0.5,
     )
     x_test, y_test = gen_batch_inputs(
         sentence_pairs,
@@ -53,15 +52,13 @@ def bert_indoorlocation_fit():
         token_list,
         seq_len=seqence_len,
         mask_rate=0.3,
-        swap_sentence_rate=1.0,
+        swap_sentence_rate=0.5,
     )
     config = tf.ConfigProto(allow_soft_placement=True)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as session:
-
         # saver = tf.train.Saver()  # 保存模型参数的saver
-
         print("compiling model .....")
         model = get_model(
             token_num=len(token_dict),
@@ -122,7 +119,7 @@ def bert_indoorlocation_fit():
         print("training network...")
         # Train the model with the new callback
         H = model.fit(x_train, y_train, validation_data=(x_test, y_test),
-                      batch_size=32, epochs=1, verbose=2)
+                      batch_size=32, epochs=10, verbose=2)
 
         # saver = tf.train.Saver()
         # saver.save(session, checkpoint_path)
@@ -177,8 +174,6 @@ def bert_indoorlocation_fit():
         model.save(pretrained_model_path)
 
 
-
-
         # for (x, y) in zip(x_train,y_train):
         #     predicts = model.predict(x)
         #     y = list(map(lambda x: np.squeeze(x, axis=-1), y))
@@ -199,4 +194,4 @@ def bert_indoorlocation_fit():
         #
         #     break
 
-bert_indoorlocation_fit()
+bert_indoorlocation_pretrain()

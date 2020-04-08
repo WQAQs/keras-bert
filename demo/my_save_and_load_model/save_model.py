@@ -46,7 +46,7 @@ init = tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init)
 
-    for epoch in range(10):                             #100个epoch
+    for epoch in range(2):                             #100个epoch
         for (x, y) in zip(x_train, y_train):
 
             sess.run(optimizer, feed_dict={X: x, Y: y})
