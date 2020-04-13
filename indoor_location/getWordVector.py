@@ -78,9 +78,6 @@ def generate_word_id_wordvec_map():
             wordvec.append(mac_rssi)
             id += 1
     wordvec
-    id2wordvec_map
-    word2id_map
-
 
 def generateWordVec():
     global wordvec_file

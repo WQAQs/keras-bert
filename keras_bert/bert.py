@@ -365,14 +365,18 @@ def compile_model(model,
     :param learning_rate: Learning rate.
     :return: The compiled model.
     """
+    # model.compile(
+    #     optimizer=AdamWarmup(
+    #         decay_steps=decay_steps,
+    #         warmup_steps=warmup_steps,
+    #         learning_rate=learning_rate,
+    #         weight_decay=weight_decay,
+    #         weight_decay_pattern=['embeddings', 'kernel', 'W1', 'W2', 'Wk', 'Wq', 'Wv', 'Wo'],
+    #     ),
+    #     loss=keras.losses.sparse_categorical_crossentropy,
+    # )
     model.compile(
-        optimizer=AdamWarmup(
-            decay_steps=decay_steps,
-            warmup_steps=warmup_steps,
-            learning_rate=learning_rate,
-            weight_decay=weight_decay,
-            weight_decay_pattern=['embeddings', 'kernel', 'W1', 'W2', 'Wk', 'Wq', 'Wv', 'Wo'],
-        ),
+        optimizer=keras.optimizers.RMSprop(0.001),
         loss=keras.losses.sparse_categorical_crossentropy,
     )
 

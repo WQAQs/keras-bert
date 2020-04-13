@@ -61,4 +61,6 @@ csv_rootdir = globalConfig.all_unlabeled_csv_dir
 # txt_rootdir = globalConfig.root_data_dir + "\\test_code_data\\unlabeled_txt"
 # csv_rootdir = globalConfig.root_data_dir + "\\test_code_data\\unlabeled_csv"
 
+if not os.path.exists(csv_rootdir):  # 目标目录不存在时创建目录
+    os.makedirs(csv_rootdir)
 loadAllTxt2Csv(txt_rootdir, csv_rootdir)

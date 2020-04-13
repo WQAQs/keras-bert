@@ -30,7 +30,7 @@ sampleset_dir = root_data_dir + "\\sampleset_data"  #保存生成的样本集的
 # train_dataset_file = sampleset_dir + "\\train_dataset" + point_range + "_" + n_days + "_" + time_interval + ".csv"  # 保存训练集的文件
 # valid_dataset_file = sampleset_dir + "\\valid_dataset" + point_range + "_" + n_days + "_" + time_interval + ".csv"  # 保存验证集的文件
 
-sample_dataset_file = sampleset_dir + "\\sampleset_day20-1-8_points20_average_interval_500ms.csv"  # 保存样本数据集的文件
+sample_dataset_file = sampleset_dir + "\\sampleset_7days_20points_average_interval_500ms.csv"  # 保存样本数据集的文件
 train_dataset_file = sampleset_dir + "\\train_dataset1.csv"  # 保存训练集的文件
 valid_dataset_file = sampleset_dir + "\\valid_dataset1.csv"  # 保存验证集的文件
 # test_datset_file = testset_dir + "\\1_8points_7days_500ms\\onehot_sampleset1_8points_7days_500ms.csv"  # 保存测试集的文件
