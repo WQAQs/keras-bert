@@ -44,7 +44,10 @@ def lable_a_csv(csv_file_path, labeled_root_dir,pattern):
 #     # csv_file_name = csv_file_path.split("\\")[-1]  # 获取不带路径的文件名
 #     result = re.match(pattern, csv_file_name)
 #     return result
-
+if not os.path.exists(unlabeled_csv_root_dir):  # 目标目录不存在时创建目录
+    os.makedirs(unlabeled_csv_root_dir)
+if not os.path.exists(labeld_csv_root_dir):  # 目标目录不存在时创建目录
+    os.makedirs(labeld_csv_root_dir)
 lable_data(unlabeled_csv_root_dir, labeld_csv_root_dir)    # csv文件名字对应参考点的tag，csv文件的父文件夹名对应参考点的类tag
 
 # phoneNumberRegex = re.compile(r'(\d{3})-(\d{3}-\d{4})')
