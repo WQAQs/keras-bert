@@ -1,10 +1,7 @@
 import os
-
 import tensorflow as tf
 from tensorflow import keras
-# from keras_bert.backend import keras
 
-# print(tf.version.VERSION)
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.mnist.load_data()
 
 train_labels = train_labels[:1000]
@@ -36,7 +33,7 @@ model = create_model()
 # Display the model's architecture
 model.summary()
 
-checkpoint_path = "logs/cp.ckpt"
+checkpoint_path = "tf_ckpt_logs/model.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 
 # Create a callback that saves the model's weights
@@ -46,8 +43,8 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
 # Train the model with the new callback
 model.fit(train_images,
           train_labels,
-          epochs=10,
-          validation_data=(test_images,test_labels),
+          epochs=2,
+          validation_data=(test_images, test_labels),
           callbacks=[cp_callback])  # Pass callback to training
 
 # This may generate warnings related to saving the state of the optimizer.
@@ -67,5 +64,5 @@ print("Untrained model, accuracy: {:5.2f}%".format(100*acc))
 model.load_weights(checkpoint_path)
 
 # Re-evaluate the model
-loss,acc = model.evaluate(test_images,  test_labels, verbose=2)
+loss, acc = model.evaluate(test_images,  test_labels, verbose=2)
 print("Restored model, accuracy: {:5.2f}%".format(100*acc))

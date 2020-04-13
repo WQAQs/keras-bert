@@ -77,6 +77,9 @@ def generate_word_id_wordvec_map():
             wordvec_uniformed.append(mac_uniform_rssi)
             wordvec.append(mac_rssi)
             id += 1
+    wordvec
+    id2wordvec_map
+    word2id_map
 
 
 def generateWordVec():
