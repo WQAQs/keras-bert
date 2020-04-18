@@ -56,6 +56,45 @@ def get_embedding(inputs, token_num, pos_num, embed_dim, dropout_rate=0.1, train
     )(embed_layer)
     return embed_layer, embed_weights
 
+def my_get_embedding(inputs, token_num, pos_num, embed_dim, dropout_rate=0.1, trainable=True):
+    """Get embedding layer.
+
+    See: https://arxiv.org/pdf/1810.04805.pdf
+
+    :param inputs: Input layers.
+    :param token_num: Number of tokens.
+    :param pos_num: Maximum position.
+    :param embed_dim: The dimension of all embedding layers.
+    :param dropout_rate: Dropout rate.
+    :param trainable: Whether the layers are trainable.
+    :return: The merged embedding layer and weights of token embedding.
+    """
+    embeddings = [
+        TokenEmbedding(
+            input_dim=token_num,  # 有效AP的个数
+            output_dim=embed_dim,
+            mask_zero=True,
+            trainable=trainable,
+            name='Embedding-AP',
+        )(inputs[0]),
+        keras.layers.Embedding(
+            input_dim=128,    # RSSI的可能取值是从(-0，-128db]取整数值
+            output_dim=embed_dim,
+            trainable=trainable,
+            name='Embedding-RSSI',
+            #  name='Embedding-Segment',
+        )(inputs[1]),
+    ]
+    embeddings[0], embed_weights = embeddings[0]
+    embed_layer = keras.layers.Add(name='Embedding-AP-RSSI')(embeddings)
+    # embed_layer = PositionEmbedding(
+    #     input_dim=pos_num,
+    #     output_dim=embed_dim,
+    #     mode=PositionEmbedding.MODE_ADD,
+    #     trainable=trainable,
+    #     name='Embedding-Position',
+    # )(embed_layer)
+    return embed_layer, embed_weights
 
 class EmbeddingSimilarity(keras.layers.Layer):
     """Calculate similarity between features and token embeddings with bias term."""

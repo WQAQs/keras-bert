@@ -57,4 +57,7 @@ class NewsGroupsHP(HyperParameters):
     DENSE_2 = 128
     N_LABELS = 20
 
+valid_ibeacon_num = 26 #有效的ap数量
+# seqence_len = valid_ibeacon_num*2+3   # 因为tokens = [TOKEN_CLS] + first + [TOKEN_SEP] + second + [TOKEN_SEP]
+seqence_len = valid_ibeacon_num
 

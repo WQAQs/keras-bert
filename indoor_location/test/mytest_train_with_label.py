@@ -7,7 +7,8 @@ from keras_bert.backend import backend as K
 from keras_bert.layers import get_inputs, get_embedding, TokenEmbedding, EmbeddingSimilarity, Masked, Extract, TaskEmbedding
 from keras_bert import (get_model, compile_model, get_base_dict, gen_batch_inputs, get_token_embedding,
                         get_custom_objects, set_custom_objects, loader)
-from indoor_location.utils import (get_sentence_pairs, gen_bert_data,evaluate_fine_tune_model)
+# from indoor_location.utils import (get_sentence_pairs, gen_bert_data, evaluate_fine_tune_model)
+from indoor_location import utils
 from keras_bert.layers import get_inputs
 from keras_bert import load_trained_model_from_checkpoint,build_model_from_config
 
@@ -112,9 +113,9 @@ def bert_indoorlocation_train_with_label():
     #     swap_sentence_rate=1.0,
     # )
 
-    x_train, y_train, reference_tags_train = gen_bert_data(train_datafile_name, seqence_len)
-    x_valid, y_valid,reference_tags_valid = gen_bert_data(valid_datafile_name,seqence_len)
-    x_test, y_test, reference_tags_test = gen_bert_data(test_datafile_name, seqence_len)
+    x_train, y_train, reference_tags_train = utils.gen_fine_tune_bert_data(train_datafile_name, seqence_len)
+    x_valid, y_valid,reference_tags_valid = utils.gen_fine_tune_bert_data(valid_datafile_name,seqence_len)
+    x_test, y_test, reference_tags_test = utils.gen_fine_tune_bert_data(test_datafile_name, seqence_len)
 
     # x_train, y_train = np.array(x_train), np.array(y_train)
     # x_train = x_train.reshape((x_train.shape[0], x_train.shape[1], x_train.shape[2], 1))

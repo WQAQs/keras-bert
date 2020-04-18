@@ -5,13 +5,13 @@ from keras_transformer import get_encoders
 from keras_transformer import get_custom_objects as get_encoder_custom_objects
 from .backend import keras
 from .activations import gelu
-from .layers import get_inputs, get_embedding, TokenEmbedding, EmbeddingSimilarity, Masked, Extract, TaskEmbedding
+from .layers import get_inputs, get_embedding, my_get_embedding, TokenEmbedding, EmbeddingSimilarity, Masked, Extract, TaskEmbedding
 from .optimizers import AdamWarmup
 
 
 __all__ = [
     'TOKEN_PAD', 'TOKEN_UNK', 'TOKEN_CLS', 'TOKEN_SEP', 'TOKEN_MASK',
-    'gelu', 'get_model', 'compile_model', 'get_base_dict', 'gen_batch_inputs', 'get_token_embedding',
+    'gelu', 'get_model', 'my_get_model', 'compile_model', 'get_base_dict', 'gen_batch_inputs', 'get_token_embedding',
     'get_custom_objects', 'set_custom_objects'
 ]
 
@@ -177,178 +177,159 @@ def get_model(token_num,
             transformed = outputs[0]
         return inputs, transformed
 
+def my_get_model(token_num,
+              pos_num=512,
+              seq_len=512,
+              embed_dim=768,
+              transformer_num=12,
+              head_num=12,
+              feed_forward_dim=3072,
+              dropout_rate=0.1,
+              attention_activation=None,
+              feed_forward_activation='gelu',
+              training=True,
+              trainable=None,
+              output_layer_num=1,
+              use_task_embed=False,
+              task_num=10,
+              use_adapter=False,
+              adapter_units=None):
+    """Get BERT model.
 
+    See: https://arxiv.org/pdf/1810.04805.pdf
 
+    :param token_num: Number of tokens.
+    :param pos_num: Maximum position.
+    :param seq_len: Maximum length of the input sequence or None.
+    :param embed_dim: Dimensions of embeddings.
+    :param transformer_num: Number of transformers.
+    :param head_num: Number of heads in multi-head attention in each transformer.
+    :param feed_forward_dim: Dimension of the feed forward layer in each transformer.
+    :param dropout_rate: Dropout rate.
+    :param attention_activation: Activation for attention layers.
+    :param feed_forward_activation: Activation for feed-forward layers.
+    :param training: A built model with MLM and NSP outputs will be returned if it is `True`,
+                     otherwise the input layers and the last feature extraction layer will be returned.
+    :param trainable: Whether the model is trainable.
+    :param output_layer_num: The number of layers whose outputs will be concatenated as a single output.
+                             Only available when `training` is `False`.
+    :param use_task_embed: Whether to add task embeddings to existed embeddings.
+    :param task_num: The number of tasks.
+    :param use_adapter: Whether to use feed-forward adapters before each residual connections.
+    :param adapter_units: The dimension of the first transformation in feed-forward adapter.
+    :return: The built model.
+    """
+    if attention_activation == 'gelu':
+        attention_activation = gelu
+    if feed_forward_activation == 'gelu':
+        feed_forward_activation = gelu
+    if trainable is None:
+        trainable = training
+    if adapter_units is None:
+        adapter_units = max(1, embed_dim // 100)
 
-# def mytest_get_model(token_num,
-#               pos_num=512,
-#               seq_len=512,
-#               embed_dim=768,
-#               transformer_num=12,
-#               head_num=12,
-#               feed_forward_dim=3072,
-#               dropout_rate=0.1,
-#               attention_activation=None,
-#               feed_forward_activation='gelu',
-#               training=True,
-#               trainable=None,
-#               output_layer_num=1,
-#               use_task_embed=False,
-#               task_num=10,
-#               use_adapter=False,
-#               adapter_units=None):
-#     """Get BERT model.
-#
-#     See: https://arxiv.org/pdf/1810.04805.pdf
-#
-#     :param token_num: Number of tokens.
-#     :param pos_num: Maximum position.
-#     :param seq_len: Maximum length of the input sequence or None.
-#     :param embed_dim: Dimensions of embeddings.
-#     :param transformer_num: Number of transformers.
-#     :param head_num: Number of heads in multi-head attention in each transformer.
-#     :param feed_forward_dim: Dimension of the feed forward layer in each transformer.
-#     :param dropout_rate: Dropout rate.
-#     :param attention_activation: Activation for attention layers.
-#     :param feed_forward_activation: Activation for feed-forward layers.
-#     :param training: A built model with MLM and NSP outputs will be returned if it is `True`,
-#                      otherwise the input layers and the last feature extraction layer will be returned.
-#     :param trainable: Whether the model is trainable.
-#     :param output_layer_num: The number of layers whose outputs will be concatenated as a single output.
-#                              Only available when `training` is `False`.
-#     :param use_task_embed: Whether to add task embeddings to existed embeddings.
-#     :param task_num: The number of tasks.
-#     :param use_adapter: Whether to use feed-forward adapters before each residual connections.
-#     :param adapter_units: The dimension of the first transformation in feed-forward adapter.
-#     :return: The built model.
-#     """
-#
-#     def _trainable(_layer):
-#         if isinstance(trainable, (list, tuple, set)):
-#             for prefix in trainable:
-#                 if _layer.name.startswith(prefix):
-#                     return True
-#             return False
-#         return trainable
-#
-#     inputs = get_inputs(seq_len=seq_len)
-#
-#     if training:
-#         if attention_activation == 'gelu':
-#             attention_activation = gelu
-#         if feed_forward_activation == 'gelu':
-#             feed_forward_activation = gelu
-#         if trainable is None:
-#             trainable = training
-#         if adapter_units is None:
-#             adapter_units = max(1, embed_dim // 100)
-#
-#         embed_layer, embed_weights = get_embedding(
-#             inputs,
-#             token_num=token_num,
-#             embed_dim=embed_dim,
-#             pos_num=pos_num,
-#             dropout_rate=dropout_rate,
-#         )
-#         if use_task_embed:
-#             task_input = keras.layers.Input(
-#                 shape=(1,),
-#                 name='Input-Task',
-#             )
-#             embed_layer = TaskEmbedding(
-#                 input_dim=task_num,
-#                 output_dim=embed_dim,
-#                 mask_zero=False,
-#                 name='Embedding-Task',
-#             )([embed_layer, task_input])
-#             inputs = inputs[:2] + [task_input, inputs[-1]]
-#         if dropout_rate > 0.0:
-#             dropout_layer = keras.layers.Dropout(
-#                 rate=dropout_rate,
-#                 name='Embedding-Dropout',
-#             )(embed_layer)
-#         else:
-#             dropout_layer = embed_layer
-#         embed_layer = LayerNormalization(
-#             trainable=trainable,
-#             name='Embedding-Norm',
-#         )(dropout_layer)
-#         transformed = get_encoders(
-#             encoder_num=transformer_num,
-#             input_layer=embed_layer,
-#             head_num=head_num,
-#             hidden_dim=feed_forward_dim,
-#             attention_activation=attention_activation,
-#             feed_forward_activation=feed_forward_activation,
-#             dropout_rate=dropout_rate,
-#             use_adapter=use_adapter,
-#             adapter_units=adapter_units,
-#             adapter_activation=gelu,
-#         )
-#
-#
-#         mlm_dense_layer = keras.layers.Dense(
-#             units=embed_dim,
-#             activation=feed_forward_activation,
-#             name='MLM-Dense',
-#         )(transformed)
-#         mlm_norm_layer = LayerNormalization(name='MLM-Norm')(mlm_dense_layer)
-#         mlm_pred_layer = EmbeddingSimilarity(name='MLM-Sim')([mlm_norm_layer, embed_weights])
-#         masked_layer = Masked(name='MLM')([mlm_pred_layer, inputs[-1]])
-#         extract_layer = Extract(index=0, name='Extract')(transformed)
-#         nsp_dense_layer = keras.layers.Dense(
-#             units=embed_dim,
-#             activation='tanh',
-#             name='NSP-Dense',
-#         )(extract_layer)
-#         nsp_pred_layer = keras.layers.Dense(
-#             units=2,
-#             activation='softmax',
-#             name='NSP',
-#         )(nsp_dense_layer)
-#         model = keras.models.Model(inputs=inputs, outputs=[masked_layer, nsp_pred_layer])
-#         for layer in model.layers:
-#             layer.trainable = _trainable(layer)
-#         return model
-#     else:
-#         if use_task_embed:
-#             inputs = inputs[:3]
-#         else:
-#             inputs = inputs[:2]
-#
-#         if isinstance(output_layer_num, int):
-#             output_layer_num = min(output_layer_num, transformer_num)
-#             output_layer_num = [-i for i in range(1, output_layer_num + 1)]
-#
-#         # model = keras.models.Model(inputs=inputs, outputs=transformed)
-#         model = keras.models.load_model(  ###  更改为加载无监督预训练的模型
-#                 pretrained_model_path,
-#                 custom_objects=get_custom_objects(),
-#             )
-#         layers = []
-#         # ## 加载无监督预训练模型中的encoder部分
-#         # Input_Segment_layer = model.get_layer(name='Input-Segment')
-#         # Embedding_Segment = model.get_layer(name='Embedding-Segment')
-#         # Embedding_Token_Segment = model.get_layer(name='Embedding-Token-Segment')
-#         # for layer in model.layers:
-#         #     if layer in [Input_Segment_layer,Embedding_Segment,Embedding_Token_Segment]:
-#         #         continue
-#         #     layers.append(layer)
-#         #     layer.trainable = _trainable(layer)
-#         # ## 添加fc layer 做最后的坐标预测
-#         # layers.append(keras.layers.Dense(units=2, activation='relu'))
-#         # ## 建立模型
-#         # model = keras.Sequential(layers)
-#         # return  model
-#         extract_layer = model.get_layer(name='Encoder-2-FeedForward-Norm')
-#         outputs = []
-#         outputs.append(extract_layer.output)
-#         if len(outputs) > 1:
-#             transformed = keras.layers.Concatenate(name='Encoder-Output')(list(reversed(outputs)))
-#         else:
-#             transformed = outputs[0]
-#
-#         return inputs, transformed
+    def _trainable(_layer):
+        if isinstance(trainable, (list, tuple, set)):
+            for prefix in trainable:
+                if _layer.name.startswith(prefix):
+                    return True
+            return False
+        return trainable
+
+    inputs = get_inputs(seq_len=seq_len)
+    embed_layer, embed_weights = my_get_embedding(
+        inputs,
+        token_num=token_num,
+        embed_dim=embed_dim,
+        pos_num=pos_num,
+        dropout_rate=dropout_rate,
+    )
+    if use_task_embed:
+        task_input = keras.layers.Input(
+            shape=(1,),
+            name='Input-Task',
+        )
+        embed_layer = TaskEmbedding(
+            input_dim=task_num,
+            output_dim=embed_dim,
+            mask_zero=False,
+            name='Embedding-Task',
+        )([embed_layer, task_input])
+        inputs = inputs[:2] + [task_input, inputs[-1]]
+    if dropout_rate > 0.0:
+        dropout_layer = keras.layers.Dropout(
+            rate=dropout_rate,
+            name='Embedding-Dropout',
+        )(embed_layer)
+    else:
+        dropout_layer = embed_layer
+    embed_layer = LayerNormalization(
+        trainable=trainable,
+        name='Embedding-Norm',
+    )(dropout_layer)
+    transformed = get_encoders(
+        encoder_num=transformer_num,
+        input_layer=embed_layer,
+        head_num=head_num,
+        hidden_dim=feed_forward_dim,
+        attention_activation=attention_activation,
+        feed_forward_activation=feed_forward_activation,
+        dropout_rate=dropout_rate,
+        use_adapter=use_adapter,
+        adapter_units=adapter_units,
+        adapter_activation=gelu,
+    )
+    if training:
+        mlm_dense_layer = keras.layers.Dense(
+            units=embed_dim,
+            activation=feed_forward_activation,
+            name='AP-MLM-Dense',
+        )(transformed)
+        ap_mlm_norm_layer = LayerNormalization(name='AP-MLM-Norm')(mlm_dense_layer)
+        ap_mlm_pred_layer = EmbeddingSimilarity(name='AP-MLM-Sim')([ap_mlm_norm_layer, embed_weights])
+        ap_masked_layer = Masked(name='AP-MLM')([ap_mlm_pred_layer, inputs[-1]])
+
+        rssi_mlm_dense_layer = keras.layers.Dense(
+            units=embed_dim,
+            activation=feed_forward_activation,
+            name='RSSI-MLM-Dense',
+        )(transformed)
+        # rssi_mlm_norm_layer = LayerNormalization(name='RSSI-MLM-Norm')(rssi_mlm_dense_layer)
+        # rssi_mlm_pred_layer = EmbeddingSimilarity(name='RSSI-MLM-Sim')([rssi_mlm_norm_layer, embed_weights])
+        rssi_mlm_pred_layer = keras.layers.Dense(
+            units=1,
+            activation=feed_forward_activation,
+            name='rssi-pred',
+        )(rssi_mlm_dense_layer)
+        rssi_masked_layer = Masked(name='RSSI-MLM')([rssi_mlm_pred_layer, inputs[-1]])
+
+        model = keras.models.Model(inputs=inputs, outputs=[ap_masked_layer, rssi_masked_layer])
+        for layer in model.layers:
+            layer.trainable = _trainable(layer)
+        return model
+    else:
+        if use_task_embed:
+            inputs = inputs[:3]
+        else:
+            inputs = inputs[:2]
+        model = keras.models.Model(inputs=inputs, outputs=transformed)
+        for layer in model.layers:
+            layer.trainable = _trainable(layer)
+        if isinstance(output_layer_num, int):
+            output_layer_num = min(output_layer_num, transformer_num)
+            output_layer_num = [-i for i in range(1, output_layer_num + 1)]
+        outputs = []
+        for layer_index in output_layer_num:
+            if layer_index < 0:
+                layer_index = transformer_num + layer_index
+            layer_index += 1
+            layer = model.get_layer(name='Encoder-{}-FeedForward-Norm'.format(layer_index))
+            outputs.append(layer.output)
+        if len(outputs) > 1:
+            transformed = keras.layers.Concatenate(name='Encoder-Output')(list(reversed(outputs)))
+        else:
+            transformed = outputs[0]
+        return inputs, transformed
 
 
 def compile_model(model,
@@ -373,11 +354,11 @@ def compile_model(model,
     #         weight_decay=weight_decay,
     #         weight_decay_pattern=['embeddings', 'kernel', 'W1', 'W2', 'Wk', 'Wq', 'Wv', 'Wo'],
     #     ),
-    #     loss=keras.losses.sparse_categorical_crossentropy,
+    #     loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
     # )
     model.compile(
         optimizer=keras.optimizers.RMSprop(0.001),
-        loss=keras.losses.sparse_categorical_crossentropy,
+        loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
     )
 
 
