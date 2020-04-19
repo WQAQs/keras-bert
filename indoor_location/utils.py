@@ -17,7 +17,7 @@ TOKEN_MASK = '[MASK]'  # Token for masking
 base_tokens = [TOKEN_MASK]
 
 token_id_from_numerical_order_file_path = ".\\logs\\token_id_from_numerical_order.csv"
-token_id_from_dataset_order_file_path = ".\\logs\\token_id_from_dataset__order1.csv"
+token_id_from_dataset_order_file_path = ".\\logs\\token_id_from_dataset__order2.csv"
 
 ap_map_file_path = "..\\data\\sampleset_data\\ap_map.csv"
 rssi_map_file_path = "..\\data\\sampleset_data\\rssi_map.csv"
@@ -72,13 +72,35 @@ def load_dataset(dataset_file):
 #     if mod > 0:
 #         indices, sentiments = indices[:-mod], sentiments[:-mod]
 #     return [indices, np.zeros_like(indices)], np.array(sentiments)
-def gen_rssi_map(rssi_map_file_path):
-    rssi_tokens = [x for x in range(-128, 0)]
-    rssi_tokens += base_tokens
-    rssi_ids = [i for i in range(len(rssi_tokens))]
-    pd.DataFrame(data={"rssi_token": rssi_tokens, "rssi_id": rssi_ids}).to_csv(rssi_map_file_path)
-    rssi_token_dict = dict(zip(rssi_tokens, rssi_ids))
-    rssi_id_dict = dict(zip(rssi_ids, rssi_tokens))
+def gen_rssi_map(dataset_file, rssi_map_file_path):
+    # rssi_tokens = [x for x in range(-128, 0)]
+    # rssi_tokens += base_tokens
+    # rssi_ids = [i for i in range(len(rssi_tokens))]
+    # pd.DataFrame(data={"rssi_token": rssi_tokens, "rssi_id": rssi_ids}).to_csv(rssi_map_file_path)
+    # rssi_token_dict = dict(zip(rssi_tokens, rssi_ids))
+    # rssi_id_dict = dict(zip(rssi_ids, rssi_tokens))
+
+    if not os.path.exists(token_id_from_dataset_order_file_path):
+        # dataset_token_dict = {TOKEN_MASK: 0}  # dataset_token_dict：key为token，value为token对应的id
+        # id_dict = {0: TOKEN_MASK} # rssi_id_dict：key为id，value为id对应的token
+        base_tokens = [TOKEN_MASK]
+        other_tokens = []
+        sentences, _, _ = load_dataset(dataset_file)
+        for sentence in sentences:
+            for token in sentence:
+                if token not in base_tokens + other_tokens:
+                    n = len(base_tokens + other_tokens)
+                    other_tokens.append(int(token))
+        other_tokens = sorted(other_tokens, key=lambda x: int(x))
+        all_tokens = base_tokens + other_tokens
+        all_ids = [i for i in range(len(all_tokens))]
+        # pd.DataFrame(data={"token": all_tokens, "id": all_ids}).to_csv(token_id_from_numerical_order_file_path)
+        pd.DataFrame(data={"rssi_token": all_tokens, "id": all_ids}).to_csv(token_id_from_dataset_order_file_path)
+    df_data = pd.read_csv(token_id_from_dataset_order_file_path)
+    tokens = df_data["rssi_token"]
+    ids = df_data["id"]
+    rssi_token_dict = dict(zip(tokens, ids))
+    rssi_id_dict = dict(zip(ids, tokens))
     return rssi_token_dict, rssi_id_dict
 
 def gen_ap_map(dataset_file, ap_map_file_path):
@@ -156,7 +178,7 @@ def get_data_from_sentences_for_pretrain(dataset_file,
     global rssi_token_dict, rssi_id_dict,ap_token_dict, ap_id_dict
     rssi_list, _, _ = load_dataset(dataset_file)
     ap_list = pd.read_csv(dataset_file).columns.tolist()[5:]  # 列名从第5列开始是ap的mac值
-    rssi_token_dict, rssi_id_dict = gen_rssi_map(rssi_map_file_path)
+    rssi_token_dict, rssi_id_dict = gen_rssi_map(dataset_file, rssi_map_file_path)
     ap_token_dict, ap_id_dict = gen_ap_map(dataset_file, ap_map_file_path)
 
     base_dict = get_base_dict()
@@ -204,7 +226,9 @@ def get_data_from_sentences_for_pretrain(dataset_file,
         rssi_mlm_outputs.append(rssi_mlm_output)
 
     inputs = [np.asarray(x) for x in [ap_inputs, rssi_inputs, masked_inputs]]
-    outputs = [np.asarray(np.expand_dims(x, axis=-1)) for x in [ap_mlm_outputs, rssi_mlm_outputs]]
+    # outputs = [np.asarray(np.expand_dims(x, axis=-1)) for x in [ap_mlm_outputs, rssi_mlm_outputs]]
+    # outputs = np.asarray(np.expand_dims(x, axis=-1)) for x in rssi_mlm_outputs
+    outputs = np.asarray([np.asarray(np.expand_dims(x, axis=-1)) for x in rssi_mlm_outputs])
     return inputs, outputs
 
 def get_sentence_pairs(dataset_file):

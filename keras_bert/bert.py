@@ -285,25 +285,26 @@ def my_get_model(token_num,
             activation=feed_forward_activation,
             name='AP-MLM-Dense',
         )(transformed)
-        ap_mlm_norm_layer = LayerNormalization(name='AP-MLM-Norm')(mlm_dense_layer)
-        ap_mlm_pred_layer = EmbeddingSimilarity(name='AP-MLM-Sim')([ap_mlm_norm_layer, embed_weights])
-        ap_masked_layer = Masked(name='AP-MLM')([ap_mlm_pred_layer, inputs[-1]])
+        # ap_mlm_norm_layer = LayerNormalization(name='AP-MLM-Norm')(mlm_dense_layer)
+        # ap_mlm_pred_layer = EmbeddingSimilarity(name='AP-MLM-Sim')([ap_mlm_norm_layer, embed_weights])
+        # ap_masked_layer = Masked(name='AP-MLM')([ap_mlm_pred_layer, inputs[-1]])
 
         rssi_mlm_dense_layer = keras.layers.Dense(
             units=embed_dim,
             activation=feed_forward_activation,
             name='RSSI-MLM-Dense',
         )(transformed)
-        # rssi_mlm_norm_layer = LayerNormalization(name='RSSI-MLM-Norm')(rssi_mlm_dense_layer)
-        # rssi_mlm_pred_layer = EmbeddingSimilarity(name='RSSI-MLM-Sim')([rssi_mlm_norm_layer, embed_weights])
-        rssi_mlm_pred_layer = keras.layers.Dense(
-            units=1,
-            activation=feed_forward_activation,
-            name='rssi-pred',
-        )(rssi_mlm_dense_layer)
+        rssi_mlm_norm_layer = LayerNormalization(name='RSSI-MLM-Norm')(rssi_mlm_dense_layer)
+        rssi_mlm_pred_layer = EmbeddingSimilarity(name='RSSI-MLM-Sim')([rssi_mlm_norm_layer, embed_weights])
+        # rssi_mlm_pred_layer = keras.layers.Dense(
+        #     units=1,
+        #     activation=feed_forward_activation,
+        #     name='rssi-pred',
+        # )(rssi_mlm_dense_layer)
         rssi_masked_layer = Masked(name='RSSI-MLM')([rssi_mlm_pred_layer, inputs[-1]])
 
-        model = keras.models.Model(inputs=inputs, outputs=[ap_masked_layer, rssi_masked_layer])
+        # model = keras.models.Model(inputs=inputs, outputs=[ap_masked_layer, rssi_masked_layer])
+        model = keras.models.Model(inputs=inputs, outputs=rssi_masked_layer)
         for layer in model.layers:
             layer.trainable = _trainable(layer)
         return model
@@ -358,7 +359,8 @@ def compile_model(model,
     # )
     model.compile(
         optimizer=keras.optimizers.RMSprop(0.001),
-        loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
+        # loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
+        loss=keras.losses.sparse_categorical_crossentropy
     )
 
 

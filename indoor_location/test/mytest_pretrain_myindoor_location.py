@@ -17,11 +17,11 @@ from indoor_location import utils
 # valid_ibeacon_num = 26 #有效的ap数量
 # # seqence_len = valid_ibeacon_num*2+3   # 因为tokens = [TOKEN_CLS] + first + [TOKEN_SEP] + second + [TOKEN_SEP]
 # seqence_len = valid_ibeacon_num + 1  # 因为tokens = [TOKEN_CLS] + first
-pretrain_train_datafile_path = "..\\data\\sampleset_data\\1day\\train_dataset1.csv"
-pretrain_valid_datafile_path = "..\\data\\sampleset_data\\1day\\valid_dataset1.csv"
+pretrain_train_datafile_path = "..\\data\\sampleset_data\\7days\\train_dataset1.csv"
+pretrain_valid_datafile_path = "..\\data\\sampleset_data\\7days\\valid_dataset1.csv"
 
 trained_model_index = "2"
-pretrained_model_index = "4"
+pretrained_model_index = "5"
 pretrained_model_path = ".\\logs\\pretrained_bert" + pretrained_model_index + ".h5"
 
 # pretrained_path = ".\\logs"
@@ -51,7 +51,7 @@ def bert_indoorlocation_pretrain():
         # saver = tf.train.Saver()  # 保存模型参数的saver
         print("compiling model .....")
         model = keras_bert.my_get_model(
-            token_num=len(utils.ap_token_dict),
+            token_num=len(utils.rssi_token_dict),
             head_num=2,
             transformer_num=2,
             embed_dim=12,
