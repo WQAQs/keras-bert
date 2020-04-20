@@ -148,8 +148,8 @@ def create_sample_dataset(pointCsvRootDir,
     ibeacon_csv = pd.read_csv(globalConfig.valid_ibeacon_file)
     if mac_rssi_word_flag:
         ## 建立word_id map
-        word2id_dict, id2word_dict = utils.gen_rssi_map_from_valid_ap(globalConfig.valid_ibeacon_file,
-                                                                      globalConfig.word_id_map_file_path)
+        word2id_dict, id2word_dict = utils.gen_word_id_map_from_valid_ap(globalConfig.valid_ibeacon_file,
+                                                                         globalConfig.word_id_map_file_path)
     ## 设置样本集csv文件的列名
     column_tags = config_column_tags()
     ## 生成样本集
@@ -372,7 +372,8 @@ def csv2sample_data_mac_rssi_word(referencePoint_csv, reference_tag, coordinate_
         ###### 在一个样本的时间内，更新记录 one_sample_mac_rssi的数据 #######
         if row.mac in valid_mac_list:
             word = row.mac + '_' + str(row.rssi)  # mac_value是mac和该mac对应的信号强度value的组合， mac_value表示一个word
-            id = word2id_dict[word]
+            # id = word2id_dict[word]
+            id = word2id_dict.get(word, word2id_dict['[UNK]'])
             one_sample_mac_rssi.append(id)
     samples_dataset = pd.DataFrame(all_samples, columns=column_tags)
     return samples_dataset

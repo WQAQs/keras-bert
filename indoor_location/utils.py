@@ -7,6 +7,8 @@ import math
 import os
 import keras_bert
 from indoor_location import hyper_parameters as hp
+from indoor_location import globalConfig
+import ast
 
 TOKEN_PAD = ''  # Token for padding
 TOKEN_UNK = '[UNK]'  # Token for unknown words
@@ -73,44 +75,44 @@ def load_dataset(dataset_file):
 #         indices, sentiments = indices[:-mod], sentiments[:-mod]
 #     return [indices, np.zeros_like(indices)], np.array(sentiments)
 ## 从样本集中生成rssi_map
-def gen_rssi_map_from_dataset(sampleset_file, rssi_map_file_path):
-    # rssi_tokens = [x for x in range(-128, 0)]
-    # rssi_tokens += base_tokens
-    # rssi_ids = [i for i in range(len(rssi_tokens))]
-    # pd.DataFrame(data={"rssi_token": rssi_tokens, "rssi_id": rssi_ids}).to_csv(rssi_map_file_path)
-    # rssi_token_dict = dict(zip(rssi_tokens, rssi_ids))
-    # rssi_id_dict = dict(zip(rssi_ids, rssi_tokens))
+# def gen_rssi_map_from_dataset(sampleset_file, rssi_map_file_path):
+#     # rssi_tokens = [x for x in range(-128, 0)]
+#     # rssi_tokens += base_tokens
+#     # rssi_ids = [i for i in range(len(rssi_tokens))]
+#     # pd.DataFrame(data={"rssi_token": rssi_tokens, "rssi_id": rssi_ids}).to_csv(rssi_map_file_path)
+#     # rssi_token_dict = dict(zip(rssi_tokens, rssi_ids))
+#     # rssi_id_dict = dict(zip(rssi_ids, rssi_tokens))
+#
+#     if not os.path.exists(token_id_from_dataset_order_file_path):
+#         # dataset_token_dict = {TOKEN_MASK: 0}  # dataset_token_dict：key为token，value为token对应的id
+#         # id_dict = {0: TOKEN_MASK} # rssi_id_dict：key为id，value为id对应的token
+#         base_tokens = [TOKEN_MASK]
+#         other_tokens = []
+#         sentences, _, _ = load_dataset(sampleset_file)
+#         for sentence in sentences:
+#             for token in sentence:
+#                 if token not in other_tokens:
+#                     other_tokens.append(token)
+#         other_tokens = sorted(other_tokens, key=lambda x: int(x))
+#         all_tokens = base_tokens + other_tokens
+#         all_ids = [i for i in range(len(all_tokens))]
+#         # pd.DataFrame(data={"token": all_tokens, "id": all_ids}).to_csv(token_id_from_numerical_order_file_path)
+#         pd.DataFrame(data={"rssi_token": all_tokens, "id": all_ids}).to_csv(token_id_from_dataset_order_file_path)
+#     df_data = pd.read_csv(token_id_from_dataset_order_file_path)
+#     tokens = df_data["rssi_token"]
+#     ids = df_data["id"]
+#     rssi_token_dict = dict(zip(tokens, ids))
+#     rssi_id_dict = dict(zip(ids, tokens))
+#     return rssi_token_dict, rssi_id_dict
 
-    if not os.path.exists(token_id_from_dataset_order_file_path):
-        # dataset_token_dict = {TOKEN_MASK: 0}  # dataset_token_dict：key为token，value为token对应的id
-        # id_dict = {0: TOKEN_MASK} # rssi_id_dict：key为id，value为id对应的token
-        base_tokens = [TOKEN_MASK]
-        other_tokens = []
-        sentences, _, _ = load_dataset(sampleset_file)
-        for sentence in sentences:
-            for token in sentence:
-                if token not in other_tokens:
-                    other_tokens.append(token)
-        other_tokens = sorted(other_tokens, key=lambda x: int(x))
-        all_tokens = base_tokens + other_tokens
-        all_ids = [i for i in range(len(all_tokens))]
-        # pd.DataFrame(data={"token": all_tokens, "id": all_ids}).to_csv(token_id_from_numerical_order_file_path)
-        pd.DataFrame(data={"rssi_token": all_tokens, "id": all_ids}).to_csv(token_id_from_dataset_order_file_path)
-    df_data = pd.read_csv(token_id_from_dataset_order_file_path)
-    tokens = df_data["rssi_token"]
-    ids = df_data["id"]
-    rssi_token_dict = dict(zip(tokens, ids))
-    rssi_id_dict = dict(zip(ids, tokens))
-    return rssi_token_dict, rssi_id_dict
-
-def gen_rssi_map_from_valid_ap(valid_ap_file,saved_file_path):
+def gen_word_id_map_from_valid_ap(valid_ap_file, saved_file_path):
     valid_mac_list = pd.read_csv(valid_ap_file)['mac']
     word_list = []
     word2id_dict = get_base_token2id_dict()
     id2word_dict = get_base_id2token_dict()
     id = len(word2id_dict)
     for mac in valid_mac_list:
-        for i in range(-128, 0):
+        for i in range(-100, -40):
             word = mac+'_'+str(i)
             word_list.append(word)
             word2id_dict[word] = id
@@ -123,68 +125,173 @@ def gen_rssi_map_from_valid_ap(valid_ap_file,saved_file_path):
 
 def get_word_id_map(word_id_map_file_path):
     csv = pd.read_csv(word_id_map_file_path)
-    word_list = csv['word'].values().tolist()
-    id_list = csv['id'].values().tolist()
+    word_list = csv['word'].values.tolist()
+    id_list = csv['id'].values.tolist()
     word2id_dict = dict(zip(word_list, id_list))
     id2word_dict = dict(zip(id_list, word_list))
     return word2id_dict, id2word_dict
 
-def gen_ap_map(dataset_file, ap_map_file_path):
-    dataframe = pd.read_csv(dataset_file)
-    ap_tokens = pd.read_csv(dataset_file).columns.tolist()[5:]  # 列名从第5列开始是ap的mac值
-    ap_tokens += base_tokens
-    ap_ids = [x for x in range(len(ap_tokens))]
-    pd.DataFrame(data={"ap_token": ap_tokens, "ap_id": ap_ids}).to_csv(ap_map_file_path)
-    ap_token_dict = dict(zip(ap_tokens, ap_ids))
-    ap_id_dict = dict(zip(ap_ids, ap_tokens))
-    return ap_token_dict, ap_id_dict
+# def gen_ap_map(dataset_file, ap_map_file_path):
+#     dataframe = pd.read_csv(dataset_file)
+#     ap_tokens = pd.read_csv(dataset_file).columns.tolist()[5:]  # 列名从第5列开始是ap的mac值
+#     ap_tokens += base_tokens
+#     ap_ids = [x for x in range(len(ap_tokens))]
+#     pd.DataFrame(data={"ap_token": ap_tokens, "ap_id": ap_ids}).to_csv(ap_map_file_path)
+#     ap_token_dict = dict(zip(ap_tokens, ap_ids))
+#     ap_id_dict = dict(zip(ap_ids, ap_tokens))
+#     return ap_token_dict, ap_id_dict
+#
+# def get_id_data_from_sentence_pairs_for_pretrain(file):
+#     sentence_pairs = get_sentence_pairs(file)
+#     if not os.path.exists(token_id_from_numerical_order_file_path):
+#         dataset_token_dict = get_base_dict()  # dataset_token_dict：key为token，value为token对应的id
+#         id_dict = get_base_id2token_dict()  # rssi_id_dict：key为id，value为id对应的token
+#         df_data = [[TOKEN_PAD, 0],
+#                    [TOKEN_UNK, 1],
+#                    [TOKEN_CLS, 2],
+#                    [TOKEN_SEP, 3],
+#                    [TOKEN_MASK, 4]
+#         ]
+#         base_tokens = [TOKEN_PAD, TOKEN_UNK, TOKEN_CLS, TOKEN_SEP, TOKEN_MASK]
+#         other_tokens = []
+#
+#         for pairs in sentence_pairs:
+#             for token in pairs[0] + pairs[1]:
+#                 if token not in dataset_token_dict:
+#                     n = len(dataset_token_dict)
+#                     dataset_token_dict[token] = n
+#                     other_tokens.append(token)
+#                     id_dict[n] = token
+#                     df_data.append([token, n])
+#         other_tokens = sorted(other_tokens, key=lambda x: int(x))
+#         all_tokens = base_tokens + other_tokens
+#         all_ids = [i for i in range(len(all_tokens))]
+#         pd.DataFrame(data={"token": all_tokens, "id": all_ids}).to_csv(token_id_from_numerical_order_file_path)
+#         pd.DataFrame(df_data, columns=["token", "id"]).to_csv(token_id_from_dataset_order_file_path)
+#     df_data = pd.read_csv(token_id_from_numerical_order_file_path)
+#     tokens = df_data["token"]
+#     ids = df_data["id"]
+#     token_dict = dict(zip(tokens, ids))
+#     id_dict = dict(zip(ids, tokens))
+#
+#     token_list = list(token_dict.keys())
+#
+#     x, y = keras_bert.gen_batch_inputs(
+#         sentence_pairs,
+#         token_dict,
+#         token_list,
+#         seq_len=hp.seq_len,
+#         mask_rate=0.3,
+#         swap_sentence_rate=0.5,
+#     )
+#     return x, y, token_dict, id_dict
+#
+# def get_id_data_from_sentences_for_pretrain(dataset_file,
+#                                             mask_rate=0.15,
+#                                             mask_mask_rate=0.8,
+#                                             mask_random_rate=0.1,
+#                                             force_mask=True):
+#     """
+#
+#     :param batch_size:
+#     :param rssi_list:numpy.ndarray
+#     :param ap_token_dict:numpy.ndarray
+#     :param ap_list:list<list>
+#     :param mask_rate:
+#     :param mask_mask_rate:
+#     :param mask_random_rate:
+#     :param force_mask:
+#     :return:
+#     """
+#     global rssi_token_dict, rssi_id_dict,ap_token_dict, ap_id_dict
+#     rssi_list, _, _ = load_dataset(dataset_file)
+#     ap_list = pd.read_csv(dataset_file).columns.tolist()[5:]  # 列名从第5列开始是ap的mac值
+#     rssi_token_dict, rssi_id_dict = gen_rssi_map_from_dataset(dataset_file, rssi_map_file_path)
+#     ap_token_dict, ap_id_dict = gen_ap_map(dataset_file, ap_map_file_path)
+#
+#     base_dict = get_base_dict()
+#     # ap_unknown_index = ap_token_dict[TOKEN_UNK]
+#     # rssi_unknown_index = rssi_token_dict[TOKEN_UNK]
+#
+#     ap_inputs, rssi_inputs, masked_inputs = [], [], []
+#     ap_mlm_outputs, rssi_mlm_outputs = [], []
+#     has_mask = False
+#     for i in range(len(rssi_list)):
+#         ap_input, masked_input, rssi_input = [], [], []
+#         ap_mlm_output, rssi_mlm_output = [], []
+#         aps = ap_list
+#         rssis = rssi_list[i]
+#         # ap_mlm_output.append([]ap_token_dict.get(aps, ap_unknown_index))
+#         # rssi_mlm_output.append(rssi_token_dict.get(rssis, rssi_unknown_index))
+#         ap_mlm_output = [ap_token_dict.get(x) for x in aps]
+#         rssi_mlm_output = [rssi_token_dict.get(x) for x in rssis]
+#         for j in range(len(aps)):
+#             ap_token = aps[j]
+#             rssi_token = rssis[j]
+#             if ap_token not in base_dict and np.random.random() < mask_rate:
+#                 has_mask = True
+#                 masked_input.append(1)
+#                 r = np.random.random()
+#                 if r < mask_mask_rate:
+#                     ap_input.append(ap_token_dict[TOKEN_MASK])
+#                     rssi_input.append(rssi_token_dict[TOKEN_MASK])
+#                 elif r < mask_mask_rate + mask_random_rate:
+#                     ap_input.append(np.random.randint(0, len(ap_token_dict)))
+#                     rssi_input.append(np.random.randint(20, 90))
+#                 else:
+#                     ap_input.append(ap_token_dict.get(ap_token))
+#                     rssi_input.append(rssi_token_dict.get(rssi_token))
+#             else:
+#                 masked_input.append(0)
+#                 ap_input.append(ap_token_dict.get(ap_token))
+#                 rssi_input.append(rssi_token_dict.get(rssi_token))
+#         if force_mask and not has_mask:
+#             masked_input[0] = 1
+#         ap_inputs.append(ap_input)
+#         rssi_inputs.append(rssi_input)
+#         masked_inputs.append(masked_input)
+#         ap_mlm_outputs.append(ap_mlm_output)
+#         rssi_mlm_outputs.append(rssi_mlm_output)
+#
+#     inputs = [np.asarray(x) for x in [ap_inputs, rssi_inputs, masked_inputs]]
+#     # outputs = [np.asarray(np.expand_dims(x, axis=-1)) for x in [ap_mlm_outputs, rssi_mlm_outputs]]
+#     # outputs = np.asarray(np.expand_dims(x, axis=-1)) for x in rssi_mlm_outputs
+#     outputs = np.asarray([np.asarray(np.expand_dims(x, axis=-1)) for x in rssi_mlm_outputs])
+#     return inputs, outputs
 
-def get_id_data_from_sentence_pairs_for_pretrain(file):
-    sentence_pairs = get_sentence_pairs(file)
-    if not os.path.exists(token_id_from_numerical_order_file_path):
-        dataset_token_dict = get_base_dict()  # dataset_token_dict：key为token，value为token对应的id
-        id_dict = get_base_id2token_dict()  # rssi_id_dict：key为id，value为id对应的token
-        df_data = [[TOKEN_PAD, 0],
-                   [TOKEN_UNK, 1],
-                   [TOKEN_CLS, 2],
-                   [TOKEN_SEP, 3],
-                   [TOKEN_MASK, 4]
-        ]
-        base_tokens = [TOKEN_PAD, TOKEN_UNK, TOKEN_CLS, TOKEN_SEP, TOKEN_MASK]
-        other_tokens = []
+# def get_sentence_pairs(dataset_file):
+#     data_inputs, _, _ = load_dataset(dataset_file)
+#     sentence_pairs = []
+#     one_sentence_pair = []
+#     for i in range(len(data_inputs)):
+#         one_sentence = data_inputs[i]
+#         if i != 0 and i % 2 == 0:
+#             sentence_pairs.append(one_sentence_pair)
+#             one_sentence_pair = []
+#         one_sentence_pair.append(one_sentence)
+#     return sentence_pairs
 
-        for pairs in sentence_pairs:
-            for token in pairs[0] + pairs[1]:
-                if token not in dataset_token_dict:
-                    n = len(dataset_token_dict)
-                    dataset_token_dict[token] = n
-                    other_tokens.append(token)
-                    id_dict[n] = token
-                    df_data.append([token, n])
-        other_tokens = sorted(other_tokens, key=lambda x: int(x))
-        all_tokens = base_tokens + other_tokens
-        all_ids = [i for i in range(len(all_tokens))]
-        pd.DataFrame(data={"token": all_tokens, "id": all_ids}).to_csv(token_id_from_numerical_order_file_path)
-        pd.DataFrame(df_data, columns=["token", "id"]).to_csv(token_id_from_dataset_order_file_path)
-    df_data = pd.read_csv(token_id_from_numerical_order_file_path)
-    tokens = df_data["token"]
-    ids = df_data["id"]
-    token_dict = dict(zip(tokens, ids))
-    id_dict = dict(zip(ids, tokens))
+def strim_and_padding(list, seq_len):
+    for item in list:
+        item[:] = item[:seq_len]  # 多余的去掉
+        n_padding = seq_len - len(item)  # 不足的补齐
+        for i in range(n_padding):
+            item.append(0)
 
-    token_list = list(token_dict.keys())
 
-    x, y = keras_bert.gen_batch_inputs(
-        sentence_pairs,
-        token_dict,
-        token_list,
-        seq_len=hp.seqence_len,
-        mask_rate=0.3,
-        swap_sentence_rate=0.5,
-    )
-    return x, y, token_dict, id_dict
+# 存储在csv中的数组，在读取后变成了str类型：如 '[1782, 2004, 2841, 4101, 1781, 2001, 3055,
+                                # 3889, 2841, 1781, 1998, 3888, 2839, 1998, 3055, 3888, 2841, 1782, 2422, 1997, 2842, 2639]'
+                                # 要解析还原一下
+def csvstr2list(data):
+    new_data = []
+    for i in data:
+        ## ast 可以做string与list,tuple,dict之间的类型转换
+        temp = ast.literal_eval(i)
+        new_data.append(temp)
+    return new_data
 
-def get_id_data_from_sentences_for_pretrain(dataset_file,
+def get_strimed_data_from_sentences_for_pretrain(dataset_file,
+                                            seq_len=30,
                                             mask_rate=0.15,
                                             mask_mask_rate=0.8,
                                             mask_random_rate=0.1,
@@ -201,73 +308,42 @@ def get_id_data_from_sentences_for_pretrain(dataset_file,
     :param force_mask:
     :return:
     """
-    global rssi_token_dict, rssi_id_dict,ap_token_dict, ap_id_dict
-    rssi_list, _, _ = load_dataset(dataset_file)
-    ap_list = pd.read_csv(dataset_file).columns.tolist()[5:]  # 列名从第5列开始是ap的mac值
-    rssi_token_dict, rssi_id_dict = gen_rssi_map_from_dataset(dataset_file, rssi_map_file_path)
-    ap_token_dict, ap_id_dict = gen_ap_map(dataset_file, ap_map_file_path)
-
-    base_dict = get_base_dict()
-    # ap_unknown_index = ap_token_dict[TOKEN_UNK]
-    # rssi_unknown_index = rssi_token_dict[TOKEN_UNK]
-
-    ap_inputs, rssi_inputs, masked_inputs = [], [], []
-    ap_mlm_outputs, rssi_mlm_outputs = [], []
+    t =pd.read_csv(dataset_file)["mac_rssi_sentence"].values
+    sentences = pd.read_csv(dataset_file)["mac_rssi_sentence"].values.tolist()
+    sentence_list = csvstr2list(sentences)
+    strim_and_padding(sentence_list, seq_len)
+    base_id2token_dict = get_base_id2token_dict()
+    base_token2id_dict = get_base_token2id_dict()
+    word2id_dict_len = len(pd.read_csv(globalConfig.word_id_map_file_path)['id'].values.tolist())
+    sentence_inputs, masked_inputs = [], []
+    mlm_outputs = []
     has_mask = False
-    for i in range(len(rssi_list)):
-        ap_input, masked_input, rssi_input = [], [], []
-        ap_mlm_output, rssi_mlm_output = [], []
-        aps = ap_list
-        rssis = rssi_list[i]
-        # ap_mlm_output.append([]ap_token_dict.get(aps, ap_unknown_index))
-        # rssi_mlm_output.append(rssi_token_dict.get(rssis, rssi_unknown_index))
-        ap_mlm_output = [ap_token_dict.get(x) for x in aps]
-        rssi_mlm_output = [rssi_token_dict.get(x) for x in rssis]
-        for j in range(len(aps)):
-            ap_token = aps[j]
-            rssi_token = rssis[j]
-            if ap_token not in base_dict and np.random.random() < mask_rate:
+    for sentence in sentence_list:
+        sentence_input, masked_input = [], []
+        mlm_output = [token_id for token_id in sentence]
+        for token_id in sentence:
+            if token_id not in base_id2token_dict and np.random.random() < mask_rate:
                 has_mask = True
                 masked_input.append(1)
                 r = np.random.random()
                 if r < mask_mask_rate:
-                    ap_input.append(ap_token_dict[TOKEN_MASK])
-                    rssi_input.append(rssi_token_dict[TOKEN_MASK])
+                    sentence_input.append(base_token2id_dict[TOKEN_MASK])
                 elif r < mask_mask_rate + mask_random_rate:
-                    ap_input.append(np.random.randint(0, len(ap_token_dict)))
-                    rssi_input.append(np.random.randint(20, 90))
+                    sentence_input.append(np.random.randint(0, word2id_dict_len))
                 else:
-                    ap_input.append(ap_token_dict.get(ap_token))
-                    rssi_input.append(rssi_token_dict.get(rssi_token))
+                    sentence_input.append(token_id)
             else:
                 masked_input.append(0)
-                ap_input.append(ap_token_dict.get(ap_token))
-                rssi_input.append(rssi_token_dict.get(rssi_token))
+                sentence_input.append(token_id)
         if force_mask and not has_mask:
             masked_input[0] = 1
-        ap_inputs.append(ap_input)
-        rssi_inputs.append(rssi_input)
+        sentence_inputs.append(sentence_input)
         masked_inputs.append(masked_input)
-        ap_mlm_outputs.append(ap_mlm_output)
-        rssi_mlm_outputs.append(rssi_mlm_output)
-
-    inputs = [np.asarray(x) for x in [ap_inputs, rssi_inputs, masked_inputs]]
-    # outputs = [np.asarray(np.expand_dims(x, axis=-1)) for x in [ap_mlm_outputs, rssi_mlm_outputs]]
-    # outputs = np.asarray(np.expand_dims(x, axis=-1)) for x in rssi_mlm_outputs
-    outputs = np.asarray([np.asarray(np.expand_dims(x, axis=-1)) for x in rssi_mlm_outputs])
+        mlm_outputs.append(mlm_output)
+    inputs = [np.asarray(x) for x in [sentence_inputs, masked_inputs]]
+    outputs = np.asarray([np.asarray(np.expand_dims(x, axis=-1)) for x in mlm_outputs])
     return inputs, outputs
 
-def get_sentence_pairs(dataset_file):
-    data_inputs, _, _ = load_dataset(dataset_file)
-    sentence_pairs = []
-    one_sentence_pair = []
-    for i in range(len(data_inputs)):
-        one_sentence = data_inputs[i]
-        if i != 0 and i % 2 == 0:
-            sentence_pairs.append(one_sentence_pair)
-            one_sentence_pair = []
-        one_sentence_pair.append(one_sentence)
-    return sentence_pairs
 
 def gen_fine_tune_bert_data(dataset_file,seqence_len):
     # 准备训练集数据和验证集数据

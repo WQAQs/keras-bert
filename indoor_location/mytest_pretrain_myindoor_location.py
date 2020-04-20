@@ -18,8 +18,9 @@ from indoor_location import globalConfig
 # valid_ibeacon_num = 26 #有效的ap数量
 # # seqence_len = valid_ibeacon_num*2+3   # 因为tokens = [TOKEN_CLS] + first + [TOKEN_SEP] + second + [TOKEN_SEP]
 # seqence_len = valid_ibeacon_num + 1  # 因为tokens = [TOKEN_CLS] + first
-pretrain_train_datafile_path = "..\\data\\sampleset_data\\1day\\train_dataset1.csv"
-pretrain_valid_datafile_path = "..\\data\\sampleset_data\\1day\\valid_dataset1.csv"
+pretrain_train_datafile_path = ".\\data\\sampleset_data\\train_dataset1.csv"
+pretrain_valid_datafile_path = ".\\data\\sampleset_data\\valid_dataset1.csv"
+
 
 trained_model_index = "2"
 pretrained_model_index = "5"
@@ -35,9 +36,9 @@ pretrained_model_path = ".\\logs\\pretrained_bert" + pretrained_model_index + ".
 
 word_id_map_file_path = globalConfig.word_id_map_file_path
 
-flag_retrain = False
+flag_retrain = True
 EPOCHS = 1000
-LR = 1e-3
+LR = 0.05
 decay_steps = 30000
 warmup_steps = 10000
 weight_decay = 1e-3
@@ -47,8 +48,10 @@ def bert_indoorlocation_pretrain():
     # x_train, y_train, _, _ = utils.get_data_from_sentence_pairs_for_pretrain(pretrain_train_datafile_path)
     # x_valid, y_valid, _, _ = utils.get_data_from_sentence_pairs_for_pretrain(pretrain_valid_datafile_path)
     ## 准备数据
-    x_train, y_train = utils.get_id_data_from_sentences_for_pretrain(pretrain_train_datafile_path)
-    x_valid, y_valid = utils.get_id_data_from_sentences_for_pretrain(pretrain_valid_datafile_path)
+    x_train, y_train = utils.get_strimed_data_from_sentences_for_pretrain(pretrain_train_datafile_path,
+                                                                          seq_len=hp.seq_len)
+    x_valid, y_valid = utils.get_strimed_data_from_sentences_for_pretrain(pretrain_valid_datafile_path,
+                                                                          seq_len=hp.seq_len)
     word2id_dict, id2word_dict = utils.get_word_id_map(word_id_map_file_path)
     ## 设置GPU
     config = tf.ConfigProto(allow_soft_placement=True)
@@ -60,12 +63,12 @@ def bert_indoorlocation_pretrain():
         print("compiling model .....")
         model = keras_bert.my_get_model(
             token_num=len(word2id_dict),
-            head_num=4,
+            head_num=2,
             transformer_num=4,
-            embed_dim=128,
+            embed_dim=16,
             feed_forward_dim=100,
-            seq_len=hp.seqence_len,
-            pos_num=hp.seqence_len,
+            seq_len=hp.seq_len,
+            pos_num=hp.seq_len,
             dropout_rate=0.05,
             attention_activation='gelu',
         )
@@ -115,9 +118,9 @@ def bert_indoorlocation_pretrain():
         print("training network...")
         # Train the model with the new callback
         from keras.callbacks import EarlyStopping
-        early_stopping = EarlyStopping(monitor="val_loss", patience=10)
-        H = model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
-                      batch_size=128, epochs=EPOCHS, callbacks=[early_stopping])
+        early_stopping = EarlyStopping(monitor="val_loss", patience=5)
+        # H = model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
+        #               batch_size=128, epochs=EPOCHS, callbacks=[early_stopping])
 
         # saver = tf.train.Saver()
         # saver.save(session, checkpoint_path)

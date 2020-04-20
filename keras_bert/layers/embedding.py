@@ -116,8 +116,8 @@ def my_get_embedding(inputs, token_num, pos_num, embed_dim, dropout_rate=0.1, tr
             trainable=trainable,
             name='Embedding-Token',
         )(inputs[0])  # inputs[0]:tokens, inputs[1]:masks
-    embedding[0], embed_weights = embedding[0]
-    embed_layer = embedding
+    embedding[0], embed_weights = embedding
+    embed_layer = embedding[0]
     return embed_layer, embed_weights
 
 class EmbeddingSimilarity(keras.layers.Layer):
