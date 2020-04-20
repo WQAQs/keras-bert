@@ -17,8 +17,8 @@ from indoor_location import utils
 # valid_ibeacon_num = 26 #有效的ap数量
 # # seqence_len = valid_ibeacon_num*2+3   # 因为tokens = [TOKEN_CLS] + first + [TOKEN_SEP] + second + [TOKEN_SEP]
 # seqence_len = valid_ibeacon_num + 1  # 因为tokens = [TOKEN_CLS] + first
-pretrain_train_datafile_path = "..\\data\\sampleset_data\\7days\\train_dataset1.csv"
-pretrain_valid_datafile_path = "..\\data\\sampleset_data\\7days\\valid_dataset1.csv"
+pretrain_train_datafile_path = "..\\data\\sampleset_data\\1day\\train_dataset1.csv"
+pretrain_valid_datafile_path = "..\\data\\sampleset_data\\1day\\valid_dataset1.csv"
 
 trained_model_index = "2"
 pretrained_model_index = "5"

@@ -15,18 +15,19 @@ allPointCsvRootDir = globalConfig.generate_sampleset_all_labeled_csv_dir  # 总�
 
 # dp.updateAllIbeaconDataSet(allPointCsvRootDir, ibeaconFilePath)  # 更新ibeaconDataSet
 
-# dp.createSampleDataSet(allPointCsvRootDir)  # 创建样本集
+dp.create_sample_dataset(allPointCsvRootDir)  # 创建样本集
 
-sample_dataset_file = ".\\data\\sampleset_data\\valid_dataset1.csv"
-valid_dataset_file = ".\\data\\sampleset_data\\valid_dataset1.csv"
-test_dataset_file = ".\\data\\sampleset_data\\test_dataset1.csv"
+# sample_dataset_file = ".\\data\\sampleset_data\\valid_dataset1.csv"
+# valid_dataset_file = ".\\data\\sampleset_data\\valid_dataset1.csv"
+# test_dataset_file = ".\\data\\sampleset_data\\test_dataset1.csv"
 
-#划分出测试集
-def divide_sample_dataset(sample_dataset):
-    test_dataset = sample_dataset.sample(frac=0.5, random_state=0)
-    valid_dataset = sample_dataset.drop(test_dataset.index)
-    test_dataset.to_csv(test_dataset_file, index=False, encoding='utf-8')
-    valid_dataset.to_csv(valid_dataset_file, index=False, encoding='utf-8')
-dataset = pd.read_csv(sample_dataset_file)
-divide_sample_dataset(dataset)
+# #划分出测试集
+# def divide_sample_dataset(sample_dataset):
+#     test_dataset = sample_dataset.sample(frac=0.5, random_state=0)
+#     valid_dataset = sample_dataset.drop(test_dataset.index)
+#     test_dataset.to_csv(test_dataset_file, index=False, encoding='utf-8')
+#     valid_dataset.to_csv(valid_dataset_file, index=False, encoding='utf-8')
+#
+# dataset = pd.read_csv(sample_dataset_file)
+# divide_sample_dataset(dataset)
 

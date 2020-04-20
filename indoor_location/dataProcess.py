@@ -10,10 +10,11 @@ from sklearn.preprocessing import OneHotEncoder
 import indoor_location.getWordVector as getWordVector
 import indoor_location.globalConfig as globalConfig
 from sklearn.utils import shuffle
+from  indoor_location import utils
 
 # 样品数据集目标路径，可以设置为训练集或测试集
 # sampleDataSetFilePath = '.\\sample_train.csv'
-sampleDataSetFilePath = globalConfig.sample_dataset_file
+sampleDataSetFilePath = globalConfig.sample_dataset_file_path
 sample_count = 0  # 数据量统计
 initVal = -128  # 维度数据初始化
 timeInterval = globalConfig.timeInterval # 取样时间间隔
@@ -26,10 +27,11 @@ ibeacon_dataset = pd.DataFrame(columns=ibeacon_column_tags)
 out_file_created = os.path.exists(sampleDataSetFilePath)  # 标记目标文件是否已创建
 
 valid_ibeacon_file = globalConfig.valid_ibeacon_file
-train_dataset_file = globalConfig.train_dataset_file
-valid_dataset_file = globalConfig.valid_dataset_file
+train_dataset_file_path = globalConfig.train_dataset_file_path
+valid_dataset_file_path = globalConfig.valid_dataset_file_path
+test_dataset_file_path = globalConfig.test_dataset_file_path
 
-def loadAllTxt2Csv(txt_rootdir, csv_rootdir):
+def load_all_txt2csv(txt_rootdir, csv_rootdir):
 
     """
     :param txt_rootdir: string
@@ -53,7 +55,7 @@ def loadAllTxt2Csv(txt_rootdir, csv_rootdir):
                 txt2csv(rawPoints_file_path, dist_class_path)
 
 
-def mergeAllCsv(original_csv_rootdir, plus_csv_rootdir):
+def merge_all_csv(original_csv_rootdir, plus_csv_rootdir):
     """
     将新表格加入总数据的方法
     :param original_csv_rootdir: string
@@ -75,7 +77,7 @@ def mergeAllCsv(original_csv_rootdir, plus_csv_rootdir):
                 shutil.copy(csv_path, dist_path)  # 此处若目标路径不存在将报错
 
 
-def updateAllIbeaconDataSet(csv_rootdir, ibeacon_file_path):
+def update_all_ibeacon_dataset(csv_rootdir, ibeacon_file_path):
     """
     更新ibeacon统计表的方法
     :param csv_rootdir: string
@@ -92,7 +94,7 @@ def updateAllIbeaconDataSet(csv_rootdir, ibeacon_file_path):
         for file in files:
             file_path = os.path.join(class_dir, file)
             data = pd.read_csv(file_path, names=['time', 'uuid', 'mac', 'rssi'])
-            updateIbeaconDataSet(data)
+            update_ibeacon_dataset(data)
     ibeacon_dataset.sort_values("count", inplace=True, ascending=False)
     ibeacon_dataset.to_csv(ibeacon_file_path, index=0)  # 保存ibeacon_dataset到csv文件
     ibeacon_csv = pd.read_csv(ibeacon_file_path)
@@ -102,11 +104,12 @@ def updateAllIbeaconDataSet(csv_rootdir, ibeacon_file_path):
 
 def divide_sample_dataset(sample_dataset):
     train_dataset = sample_dataset.sample(frac=0.8, random_state=0)
-    valid_dataset = sample_dataset.drop(train_dataset.index)
-    train_dataset.to_csv(train_dataset_file, index=False, encoding='utf-8')
-    valid_dataset.to_csv(valid_dataset_file, index=False, encoding='utf-8')
-
-
+    sub_dataset = sample_dataset.drop(train_dataset.index)
+    valid_dataset = sub_dataset.sample(frac=0.5, random_state=0)
+    test_dataset = sub_dataset.drop(valid_dataset.index)
+    train_dataset.to_csv(train_dataset_file_path, index=False, encoding='utf-8')
+    valid_dataset.to_csv(valid_dataset_file_path, index=False, encoding='utf-8')
+    test_dataset.to_csv(test_dataset_file_path, index=False, encoding='utf-8')
 
 def load_dataset(dataset):
 
@@ -121,8 +124,8 @@ def load_data(data_file, divide_dataset_flag):
     shuffled_dataset = shuffle(dataset)
     if divide_dataset_flag:
         divide_sample_dataset(shuffled_dataset)
-    train_dataset = pd.read_csv(train_dataset_file)
-    valid_dataset = pd.read_csv(valid_dataset_file)
+    train_dataset = pd.read_csv(train_dataset_file_path)
+    valid_dataset = pd.read_csv(valid_dataset_file_path)
     train_input, train_coordinates, train_reference_tag = load_dataset(train_dataset)
     valid_input, valid_coordinates, valid_reference_tag = load_dataset(valid_dataset)
     train_coordinates = train_coordinates.astype(float)
@@ -130,7 +133,10 @@ def load_data(data_file, divide_dataset_flag):
     return train_input, train_coordinates, train_reference_tag, valid_input, valid_coordinates, valid_reference_tag
 
 # generate sample dataset
-def createSampleDataSet(pointCsvRootDir, shuffle_flag=True):
+def create_sample_dataset(pointCsvRootDir,
+                          mac_rssi_word_flag = True,
+                          onehot_mac_rssi_flag = False,
+                          slice_and_average_flag = False):
     """
     创建数据样本集的方法，通过ibeacon统计表筛选维度并
     :param pointCsvRootDir: string
@@ -140,15 +146,25 @@ def createSampleDataSet(pointCsvRootDir, shuffle_flag=True):
     :return:
     """
     ibeacon_csv = pd.read_csv(globalConfig.valid_ibeacon_file)
-    column_tags = configColumnTags(onehot_flag=False,valid_ibeacon_csv=ibeacon_csv)
-    loadAllCsvFile2SampleSet(pointCsvRootDir, column_tags)
-    dataset = pd.read_csv(globalConfig.sample_dataset_file)
+    if mac_rssi_word_flag:
+        ## 建立word_id map
+        word2id_dict, id2word_dict = utils.gen_rssi_map_from_valid_ap(globalConfig.valid_ibeacon_file,
+                                                                      globalConfig.word_id_map_file_path)
+    ## 设置样本集csv文件的列名
+    column_tags = config_column_tags()
+    ## 生成样本集
+    load_all_csv_file2sample_set(pointCsvRootDir, column_tags,
+                                 word2id_dict, id2word_dict,
+                                 mac_rssi_word_flag=mac_rssi_word_flag,
+                                 onehot_mac_rssi_flag=onehot_mac_rssi_flag,
+                                 slice_and_average_flag=slice_and_average_flag)
+    ## 把生成的样本集划分成：训练集、验证集、测试集
+    dataset = pd.read_csv(globalConfig.sample_dataset_file_path)
     shuffled_dataset = shuffle(dataset)
-    if shuffle_flag:
-        divide_sample_dataset(shuffled_dataset)
+    divide_sample_dataset(shuffled_dataset)
 
 
-def updateIbeaconDataSet(point_data):
+def update_ibeacon_dataset(point_data):
     """
     根据数据更新ibeacon表的方法
     :param point_data: DataFrame or TextParser
@@ -171,16 +187,19 @@ def updateIbeaconDataSet(point_data):
             index = macDF.index.values[0]
             ibeacon_dataset.loc[index:index, 'count'] = macDF['count'] + mac_count
 
-def configColumnTags(onehot_flag,valid_ibeacon_csv):
+def config_column_tags(valid_ibeacon_csv=None, onehotmac_rssi_flag=False, mac_rssi_word_flag=True):
     """
     确定样本集维度标签的方法
     :param ibeacon_csv: DataFrame or TextParser
     ibeacon
     :return: list<string>
     """
-    if onehot_flag:
+    if mac_rssi_word_flag:
+        column_tags = ["reference_tag", "coordinate_x", "coordinate_y", "cluster_tag", "direction_tag",
+                       "mac_rssi_sentence"]
+    elif onehotmac_rssi_flag:
         column_tags = ["reference_tag", "coordinate_x", "coordinate_y", "cluster_tag", "direction_tag", "onehotmac_rssi_sentence"]
-    else:
+    elif valid_ibeacon_csv:
         column_tags = ["reference_tag", "coordinate_x", "coordinate_y", "cluster_tag", "direction_tag"]
         for index, row in valid_ibeacon_csv.iterrows():
             tag = row["mac"]  # 这里改为直接使用mac地址作为维度标签以减少使用ibeacon统计表的次数
@@ -211,7 +230,8 @@ def txt2csv(referenceRawPointFile, dist_dir):
     txt.to_csv(dist_file_path, index=False, encoding='utf-8')
 
 
-def deprecated_sliceAndAverage(referencePoint_csv, reference_tag, cluster_tag, direction_tag, coordinate_x,coordinate_y,column_tags, samples_dataset):
+def deprecated_slice_and_average(referencePoint_csv, reference_tag, cluster_tag, direction_tag,
+                                 coordinate_x, coordinate_y, column_tags, samples_dataset):
     """
     将数据按设定的时间片分割并求平均的方法
     :param referencePoint_csv: DataFrame
@@ -265,7 +285,8 @@ def deprecated_sliceAndAverage(referencePoint_csv, reference_tag, cluster_tag, d
         i = j  # 更新 i 的值，让它指向下一秒的数据起点
     return samples_dataset
 
-def sliceAndAverage(referencePoint_csv,column_tags,reference_tag, cluster_tag, direction_tag, coordinate_x,coordinate_y):
+def slice_and_average(referencePoint_csv, column_tags, reference_tag,
+                      cluster_tag, direction_tag, coordinate_x, coordinate_y):
     """
     将数据按设定的时间片分割并求平均的方法
     :param referencePoint_csv: DataFrame
@@ -324,7 +345,41 @@ def config_coordinate(reference_tag):
     return x[0], y[0]  # 所以后面用到它们的值要返回 x[0] y[0]
 
 
-def csv2sample_data_onehot(referencePoint_csv, reference_tag, coordinate_x, coordinate_y, cluster_tag, direction_tag, column_tags, timeInterval):
+def csv2sample_data_mac_rssi_word(referencePoint_csv, reference_tag, coordinate_x, coordinate_y,
+                                  cluster_tag, direction_tag, column_tags, timeInterval,
+                                  word2id_dict, id2word_dict):
+    all_samples = []
+    one_sample = []  # 记录每一个样本包括一些标签数据和多个mac的信号强度
+    one_sample_mac_rssi = []  # 记录每一个样本中的多个 mac_rssi 的组合索引
+
+    valid_mac_list = pd.read_csv(globalConfig.valid_ibeacon_file)['mac']
+    # 访问csv文件的每一行的数据，每一个循环里处理 1s 的数据，
+    # 每轮循环结束更新 i 的值时，注意要让它指向下一秒的数据起点
+    begin_time = referencePoint_csv.iloc[0][0]  # 分段的开始时间
+    for row in referencePoint_csv.itertuples():
+        ######### 数据超出一个样本的时间，就保存一个样本到样本集 #########
+        if row.time > begin_time + timeInterval:
+            one_sample.append(reference_tag)
+            one_sample.append(coordinate_x)
+            one_sample.append(coordinate_y)
+            one_sample.append(cluster_tag)
+            one_sample.append(direction_tag)
+            one_sample.append(one_sample_mac_rssi)
+            all_samples.append(one_sample)  # 将一个样本加入样本集
+            one_sample = []
+            one_sample_mac_rssi = []
+            begin_time = row.time  # 重置时间段的开始值
+        ###### 在一个样本的时间内，更新记录 one_sample_mac_rssi的数据 #######
+        if row.mac in valid_mac_list:
+            word = row.mac + '_' + str(row.rssi)  # mac_value是mac和该mac对应的信号强度value的组合， mac_value表示一个word
+            id = word2id_dict[word]
+            one_sample_mac_rssi.append(id)
+    samples_dataset = pd.DataFrame(all_samples, columns=column_tags)
+    return samples_dataset
+
+def csv2sample_data_onehot_mac_rssi(referencePoint_csv, reference_tag, coordinate_x, coordinate_y,
+                                    cluster_tag, direction_tag, column_tags, timeInterval
+                                    ):
     all_samples = []
     one_sample = []  # 记录每一个样本包括一些标签数据和多个mac的信号强度
     one_sample_mac_rssi = []  # 记录每一个样本中的多个mac的信号强度
@@ -356,13 +411,30 @@ def csv2sample_data_onehot(referencePoint_csv, reference_tag, coordinate_x, coor
     samples_dataset = pd.DataFrame(all_samples, columns=column_tags)
     return samples_dataset
 
-def loadAllCsvFile2SampleSet(csv_rootdir, column_tags):
+def load_all_csv_file2sample_set(csv_rootdir, column_tags,
+                                 mac_rssi_word_flag=True,
+                                 onehot_mac_rssi_flag = False,
+                                 slice_and_average_flag=False,
+                                 word2id_dict = None,
+                                 id2word_dict=None):
     """
     加载所有csv文件数据到样本集
     :param csv_rootdir: string
         csv文件根目录，对应子目录名为数据类别标签
     :param column_tags: list<string>
         样本维度列表
+    :param mac_rssi_word_flag: bool
+        为True时，表示生成数据集的方式是：把收到的一个有效ap的mac值和它对应的rssi作为一个word，
+        处理一个时间窗内收到的有效ap信号生成一个样本
+        注意！！这种方法中只使用了收到的有效ap
+    :param onehot_mac_rssi_flag: bool
+        为True时，表示生成数据集的方式是：把收到的一个有效ap的mac值进行onehot，然后拼接上它对应的rssi值作为一个向量，
+        处理一个时间窗内收到的有效ap
+        信号生成一个样本
+        注意！！这种方法中只使用了收到的有效ap
+    :param slice_and_average_flag: bool
+        为True时，表示生成数据集的方式是：把一个时间窗内收到的mac的不同rssi做平均，一个时间窗生成一个样本。
+        注意！！这种方法中把一个时间窗内，没有收到的有效ap的rssi值置为了-128db
     :return: nothing
     """
     global out_file_created
@@ -387,11 +459,23 @@ def loadAllCsvFile2SampleSet(csv_rootdir, column_tags):
             #ibeacon_csv = pd.read_csv(ibeacon_file_path)
             # 设置 参考点标签referencePoint_tag 和 TODO (采样方向标签referencePoint_sample_direction_tag暂未设置）
             coordinate_x, coordinate_y = config_coordinate(reference_tag)
-            # samples_dataset = csv2sample_data_onehot(csv, reference_tag, coordinate_x, coordinate_y, cluster_tag,
-            #                                          direction_tag, column_tags, globalConfig.timeInterval)
-            samples_dataset = sliceAndAverage(csv,column_tags,reference_tag,cluster_tag,direction_tag,coordinate_x,coordinate_y)
+            ## 使用特定的方式生成数据集
+            if mac_rssi_word_flag:
+                samples_dataset = csv2sample_data_mac_rssi_word(csv, reference_tag, coordinate_x, coordinate_y,
+                                                                cluster_tag, direction_tag, column_tags,
+                                                                globalConfig.timeInterval,
+                                                                word2id_dict, id2word_dict)
+            elif onehot_mac_rssi_flag:
+                samples_dataset = csv2sample_data_onehot_mac_rssi(csv, reference_tag, coordinate_x, coordinate_y,
+                                                                cluster_tag,direction_tag, column_tags,
+                                                                globalConfig.timeInterval)
+            elif slice_and_average_flag:
+                samples_dataset = slice_and_average(csv, column_tags, reference_tag, cluster_tag, direction_tag,
+                                                  coordinate_x, coordinate_y)
+            ## 保存生成的数据集到文件
             if out_file_created:
-                samples_dataset.to_csv(sampleDataSetFilePath, index=False, encoding='utf-8', header=False, mode="a") #接着在文件末尾添加数据，即以append方式写数据
+                # 接着在文件末尾添加数据，即以append方式写数据
+                samples_dataset.to_csv(sampleDataSetFilePath,index=False, encoding='utf-8', header=False, mode="a")
             else:
                 samples_dataset.to_csv(sampleDataSetFilePath, index=False, encoding='utf-8')
                 out_file_created = True

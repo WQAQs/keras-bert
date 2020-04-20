@@ -72,7 +72,8 @@ def load_dataset(dataset_file):
 #     if mod > 0:
 #         indices, sentiments = indices[:-mod], sentiments[:-mod]
 #     return [indices, np.zeros_like(indices)], np.array(sentiments)
-def gen_rssi_map(dataset_file, rssi_map_file_path):
+## 从样本集中生成rssi_map
+def gen_rssi_map_from_dataset(sampleset_file, rssi_map_file_path):
     # rssi_tokens = [x for x in range(-128, 0)]
     # rssi_tokens += base_tokens
     # rssi_ids = [i for i in range(len(rssi_tokens))]
@@ -85,7 +86,7 @@ def gen_rssi_map(dataset_file, rssi_map_file_path):
         # id_dict = {0: TOKEN_MASK} # rssi_id_dict：key为id，value为id对应的token
         base_tokens = [TOKEN_MASK]
         other_tokens = []
-        sentences, _, _ = load_dataset(dataset_file)
+        sentences, _, _ = load_dataset(sampleset_file)
         for sentence in sentences:
             for token in sentence:
                 if token not in base_tokens + other_tokens:
@@ -102,6 +103,25 @@ def gen_rssi_map(dataset_file, rssi_map_file_path):
     rssi_token_dict = dict(zip(tokens, ids))
     rssi_id_dict = dict(zip(ids, tokens))
     return rssi_token_dict, rssi_id_dict
+
+def gen_rssi_map_from_valid_ap(valid_ap_file,saved_file_path):
+    valid_mac_list = pd.read_csv(valid_ap_file)['mac']
+    word_list = []
+    word2id_dict = get_base_token2id_dict()
+    id2word_dict = get_base_id2token_dict()
+    id = 0
+    for mac in valid_mac_list:
+        for i in range(-110, -30):
+            word = mac+'_'+str(i)
+            word_list.append(word)
+            word2id_dict[word] = id
+            id2word_dict[id] = word
+            id += 1
+    all_word = word2id_dict.keys()
+    all_id = word2id_dict.values()
+    pd.DataFrame(data={"word": all_word, "id": all_id}).to_csv(saved_file_path)
+    return word2id_dict, id2word_dict
+
 
 def gen_ap_map(dataset_file, ap_map_file_path):
     dataframe = pd.read_csv(dataset_file)
@@ -178,7 +198,7 @@ def get_data_from_sentences_for_pretrain(dataset_file,
     global rssi_token_dict, rssi_id_dict,ap_token_dict, ap_id_dict
     rssi_list, _, _ = load_dataset(dataset_file)
     ap_list = pd.read_csv(dataset_file).columns.tolist()[5:]  # 列名从第5列开始是ap的mac值
-    rssi_token_dict, rssi_id_dict = gen_rssi_map(dataset_file, rssi_map_file_path)
+    rssi_token_dict, rssi_id_dict = gen_rssi_map_from_dataset(dataset_file, rssi_map_file_path)
     ap_token_dict, ap_id_dict = gen_ap_map(dataset_file, ap_map_file_path)
 
     base_dict = get_base_dict()
@@ -301,6 +321,15 @@ def get_base_id2token_dict():
         2: TOKEN_CLS,
         3: TOKEN_SEP,
         4: TOKEN_MASK,
+    }
+
+def get_base_token2id_dict():
+    return {
+        TOKEN_PAD: 0,
+        TOKEN_UNK: 1,
+        TOKEN_CLS: 2,
+        TOKEN_SEP: 3,
+        TOKEN_MASK: 4
     }
 
 def id_list2token_list(id_list, id_dict):
