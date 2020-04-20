@@ -154,7 +154,7 @@ def create_sample_dataset(pointCsvRootDir,
     column_tags = config_column_tags()
     ## 生成样本集
     load_all_csv_file2sample_set(pointCsvRootDir, column_tags,
-                                 word2id_dict, id2word_dict,
+                                 word2id_dict=word2id_dict, id2word_dict=id2word_dict,
                                  mac_rssi_word_flag=mac_rssi_word_flag,
                                  onehot_mac_rssi_flag=onehot_mac_rssi_flag,
                                  slice_and_average_flag=slice_and_average_flag)
@@ -352,7 +352,7 @@ def csv2sample_data_mac_rssi_word(referencePoint_csv, reference_tag, coordinate_
     one_sample = []  # 记录每一个样本包括一些标签数据和多个mac的信号强度
     one_sample_mac_rssi = []  # 记录每一个样本中的多个 mac_rssi 的组合索引
 
-    valid_mac_list = pd.read_csv(globalConfig.valid_ibeacon_file)['mac']
+    valid_mac_list = pd.read_csv(globalConfig.valid_ibeacon_file)['mac'].values.tolist()
     # 访问csv文件的每一行的数据，每一个循环里处理 1s 的数据，
     # 每轮循环结束更新 i 的值时，注意要让它指向下一秒的数据起点
     begin_time = referencePoint_csv.iloc[0][0]  # 分段的开始时间
@@ -413,7 +413,7 @@ def csv2sample_data_onehot_mac_rssi(referencePoint_csv, reference_tag, coordinat
 
 def load_all_csv_file2sample_set(csv_rootdir, column_tags,
                                  mac_rssi_word_flag=True,
-                                 onehot_mac_rssi_flag = False,
+                                 onehot_mac_rssi_flag=False,
                                  slice_and_average_flag=False,
                                  word2id_dict = None,
                                  id2word_dict=None):

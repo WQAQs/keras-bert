@@ -5,6 +5,7 @@ import tensorflow as tf
 import keras_bert
 from indoor_location import hyper_parameters as hp
 from indoor_location import utils
+from indoor_location import globalConfig
 
 # from keras_bert.optimizers import AdamWarmup
 # from sklearn.preprocessing import LabelBinarizer
@@ -28,8 +29,11 @@ pretrained_model_path = ".\\logs\\pretrained_bert" + pretrained_model_index + ".
 # config_path = os.path.join(pretrained_path, 'mybert_config.json')
 # checkpoint_path = os.path.join(pretrained_path, 'mybert_model.ckpt')
 # checkpoint_dir = os.path.dirname(checkpoint_path)
-rssi_token_dict, rssi_id_dict = utils.rssi_token_dict, utils.rssi_id_dict
-ap_token_dict, ap_id_dict = utils.ap_token_dict,utils.ap_id_dict
+
+# rssi_token_dict, rssi_id_dict = utils.rssi_token_dict, utils.rssi_id_dict
+# ap_token_dict, ap_id_dict = utils.ap_token_dict,utils.ap_id_dict
+
+word_id_map_file_path = globalConfig.word_id_map_file_path
 
 flag_retrain = False
 EPOCHS = 1000
@@ -42,19 +46,23 @@ weight_decay = 1e-3
 def bert_indoorlocation_pretrain():
     # x_train, y_train, _, _ = utils.get_data_from_sentence_pairs_for_pretrain(pretrain_train_datafile_path)
     # x_valid, y_valid, _, _ = utils.get_data_from_sentence_pairs_for_pretrain(pretrain_valid_datafile_path)
-    x_train, y_train = utils.get_data_from_sentences_for_pretrain(pretrain_train_datafile_path)
-    x_valid, y_valid = utils.get_data_from_sentences_for_pretrain(pretrain_valid_datafile_path)
+    ## 准备数据
+    x_train, y_train = utils.get_id_data_from_sentences_for_pretrain(pretrain_train_datafile_path)
+    x_valid, y_valid = utils.get_id_data_from_sentences_for_pretrain(pretrain_valid_datafile_path)
+    word2id_dict, id2word_dict = utils.get_word_id_map(word_id_map_file_path)
+    ## 设置GPU
     config = tf.ConfigProto(allow_soft_placement=True)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     config.gpu_options.allow_growth = True
+
     with tf.Session(config=config) as session:
         # saver = tf.train.Saver()  # 保存模型参数的saver
         print("compiling model .....")
         model = keras_bert.my_get_model(
-            token_num=len(utils.rssi_token_dict),
-            head_num=2,
-            transformer_num=2,
-            embed_dim=12,
+            token_num=len(word2id_dict),
+            head_num=4,
+            transformer_num=4,
+            embed_dim=128,
             feed_forward_dim=100,
             seq_len=hp.seqence_len,
             pos_num=hp.seqence_len,
@@ -107,7 +115,7 @@ def bert_indoorlocation_pretrain():
         print("training network...")
         # Train the model with the new callback
         from keras.callbacks import EarlyStopping
-        early_stopping = EarlyStopping(monitor="val_loss", patience=5)
+        early_stopping = EarlyStopping(monitor="val_loss", patience=10)
         H = model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
                       batch_size=128, epochs=EPOCHS, callbacks=[early_stopping])
 
@@ -170,7 +178,7 @@ def bert_indoorlocation_pretrain():
         # predicts_mlm_ids = np.argmax(predicts[0], axis=-1)
         # real_mlm_ids = list(map(lambda x: np.squeeze(x, axis=-1), y_train[0]))
         # utils.evaluate_pretrain_model(predicts_mlm_ids, real_mlm_ids)
-        # utils.evaluate_pretrain_model(model, x_test=x_valid, y_test=y_valid)
+        utils.evaluate_pretrain_model(model, x_test=x_valid, y_test=y_valid)
 
 
 

@@ -144,7 +144,7 @@ def bert_indoorlocation_train_with_label():
         pos_num=seqence_len,
         dropout_rate=0.05,
         attention_activation='gelu',
-        training=False,
+        training=False,   ### !!!!!!!一定不能忘记设置为False！！！！！！！！！
         trainable=True
     )
     # output_layer = model.inputs[:2]

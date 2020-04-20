@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from keras_bert.backend import keras
-from keras_bert import get_custom_objects, get_base_dict
+from keras_bert import get_base_dict
 import matplotlib.pyplot as plt
 import math
 import os
@@ -89,9 +89,8 @@ def gen_rssi_map_from_dataset(sampleset_file, rssi_map_file_path):
         sentences, _, _ = load_dataset(sampleset_file)
         for sentence in sentences:
             for token in sentence:
-                if token not in base_tokens + other_tokens:
-                    n = len(base_tokens + other_tokens)
-                    other_tokens.append(int(token))
+                if token not in other_tokens:
+                    other_tokens.append(token)
         other_tokens = sorted(other_tokens, key=lambda x: int(x))
         all_tokens = base_tokens + other_tokens
         all_ids = [i for i in range(len(all_tokens))]
@@ -109,19 +108,26 @@ def gen_rssi_map_from_valid_ap(valid_ap_file,saved_file_path):
     word_list = []
     word2id_dict = get_base_token2id_dict()
     id2word_dict = get_base_id2token_dict()
-    id = 0
+    id = len(word2id_dict)
     for mac in valid_mac_list:
-        for i in range(-110, -30):
+        for i in range(-128, 0):
             word = mac+'_'+str(i)
             word_list.append(word)
             word2id_dict[word] = id
             id2word_dict[id] = word
             id += 1
-    all_word = word2id_dict.keys()
-    all_id = word2id_dict.values()
+    all_word = list(word2id_dict.keys())
+    all_id = list(word2id_dict.values())
     pd.DataFrame(data={"word": all_word, "id": all_id}).to_csv(saved_file_path)
     return word2id_dict, id2word_dict
 
+def get_word_id_map(word_id_map_file_path):
+    csv = pd.read_csv(word_id_map_file_path)
+    word_list = csv['word'].values().tolist()
+    id_list = csv['id'].values().tolist()
+    word2id_dict = dict(zip(word_list, id_list))
+    id2word_dict = dict(zip(id_list, word_list))
+    return word2id_dict, id2word_dict
 
 def gen_ap_map(dataset_file, ap_map_file_path):
     dataframe = pd.read_csv(dataset_file)
@@ -133,7 +139,7 @@ def gen_ap_map(dataset_file, ap_map_file_path):
     ap_id_dict = dict(zip(ap_ids, ap_tokens))
     return ap_token_dict, ap_id_dict
 
-def get_data_from_sentence_pairs_for_pretrain(file):
+def get_id_data_from_sentence_pairs_for_pretrain(file):
     sentence_pairs = get_sentence_pairs(file)
     if not os.path.exists(token_id_from_numerical_order_file_path):
         dataset_token_dict = get_base_dict()  # dataset_token_dict：key为token，value为token对应的id
@@ -178,11 +184,11 @@ def get_data_from_sentence_pairs_for_pretrain(file):
     )
     return x, y, token_dict, id_dict
 
-def get_data_from_sentences_for_pretrain(dataset_file,
-                                         mask_rate=0.15,
-                                         mask_mask_rate=0.8,
-                                         mask_random_rate=0.1,
-                                         force_mask=True):
+def get_id_data_from_sentences_for_pretrain(dataset_file,
+                                            mask_rate=0.15,
+                                            mask_mask_rate=0.8,
+                                            mask_random_rate=0.1,
+                                            force_mask=True):
     """
 
     :param batch_size:
@@ -216,10 +222,10 @@ def get_data_from_sentences_for_pretrain(dataset_file,
         # ap_mlm_output.append([]ap_token_dict.get(aps, ap_unknown_index))
         # rssi_mlm_output.append(rssi_token_dict.get(rssis, rssi_unknown_index))
         ap_mlm_output = [ap_token_dict.get(x) for x in aps]
-        rssi_mlm_output = [rssi_token_dict.get(int(x)) for x in rssis]
+        rssi_mlm_output = [rssi_token_dict.get(x) for x in rssis]
         for j in range(len(aps)):
             ap_token = aps[j]
-            rssi_token = int(rssis[j])
+            rssi_token = rssis[j]
             if ap_token not in base_dict and np.random.random() < mask_rate:
                 has_mask = True
                 masked_input.append(1)
@@ -349,8 +355,10 @@ def all_id_lists2all_token_lists(sentences_id_data):
 
 def evaluate_pretrain_model(model,x_test,y_test):
     predicts = model.predict(x_test)
-    predicts_mlm_ids = np.argmax(predicts[0], axis=-1)
-    real_mlm_ids = list(map(lambda x: np.squeeze(x, axis=-1), y_test[0]))
+    # predicts_mlm_ids = np.argmax(predicts[0], axis=-1)
+    predicts_mlm_ids = np.argmax(predicts, axis=-1)
+    # real_mlm_ids = list(map(lambda x: np.squeeze(x, axis=-1), y_test[0]))
+    real_mlm_ids = list(map(lambda x: np.squeeze(x, axis=-1), y_test))
     predicts_mlm_tokens = all_id_lists2all_token_lists(predicts_mlm_ids)
     real_mlm_tokens = all_id_lists2all_token_lists(real_mlm_ids)
 
@@ -371,7 +379,7 @@ def evaluate_pretrain_model(model,x_test,y_test):
                     match += 1
         all_mask_real_tokens.append(mask_real_tokens)
         all_mask_predict_tokens.append(mask_predict_tokens)
-        match_ratio = match / total
+        match_ratio = match / total if total else "NAN"
         temp = [total, match, match_ratio]
         all_match_res.append(temp)
     pd.DataFrame(predicts_mlm_tokens).to_csv(all_predicts_mlm_tokens_file_path, encoding='utf-8')

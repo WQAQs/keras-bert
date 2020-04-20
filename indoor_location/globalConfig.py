@@ -30,12 +30,12 @@ sampleset_dir = root_data_dir + "\\sampleset_data"  #保存生成的样本集的
 # train_dataset_file = sampleset_dir + "\\train_dataset" + point_range + "_" + n_days + "_" + time_interval + ".csv"  # 保存训练集的文件
 # valid_dataset_file = sampleset_dir + "\\valid_dataset" + point_range + "_" + n_days + "_" + time_interval + ".csv"  # 保存验证集的文件
 
-info = "7days_20points_average_interval_500ms"
+# info = "7days_20points_average_interval_500ms"
 info = "7days_20points_mac_rssi_word"
 sample_dataset_file_path = sampleset_dir + "\\sampleset" + "_" + info + ".csv"  # 保存样本数据集的文件
 train_dataset_file_path = sampleset_dir + "\\train_dataset1.csv"  # 保存训练集的文件
 valid_dataset_file_path = sampleset_dir + "\\valid_dataset1.csv"  # 保存验证集的文件
-test_datset_file_path = sampleset_dir + "\\test_dataset1.csv"    # 保存测试集的文件
+test_dataset_file_path = sampleset_dir + "\\test_dataset1.csv"    # 保存测试集的文件
 
 ######生成的word_id_map保存的位置#######
 word_id_map_file_path = sampleset_dir + "\\word_id_map.csv"  # 一个word是一个mac和该mac对应的rssi值的组合

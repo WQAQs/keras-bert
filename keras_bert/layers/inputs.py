@@ -1,5 +1,18 @@
 from keras_bert.backend import keras
 
+#
+# def get_inputs(seq_len):
+#     """Get input layers.
+#
+#     See: https://arxiv.org/pdf/1810.04805.pdf
+#
+#     :param seq_len: Length of the sequence or None.
+#     """
+#     names = ['AP-Token', 'RSSI-Token', 'Masked']
+#     return [keras.layers.Input(
+#         shape=(seq_len,),
+#         name='Input-%s' % name,
+#     ) for name in names]
 
 def get_inputs(seq_len):
     """Get input layers.
@@ -8,7 +21,7 @@ def get_inputs(seq_len):
 
     :param seq_len: Length of the sequence or None.
     """
-    names = ['AP-Token', 'RSSI-Token', 'Masked']
+    names = ['Token',  'Masked']
     return [keras.layers.Input(
         shape=(seq_len,),
         name='Input-%s' % name,
