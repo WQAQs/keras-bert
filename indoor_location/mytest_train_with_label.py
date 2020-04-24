@@ -98,8 +98,9 @@ def get_finetune_model():
 def run_experiment_different_label_rate():
     label_rate = [0.005, 0.01, 0.1, 0.5, 0.9, 1.0]
     dist_dir = '/'.join(pretrain_train_datafile_path.split('/')[:-1])  #得到上一级目录
-    if not os.path.exists(dist_dir+'/label_rate'):
-        os.makedirs(dist_dir+'/label_rate')
+    dist_dir = dist_dir+'/label_rate'
+    if not os.path.exists(dist_dir):
+        os.makedirs(dist_dir)
     model = get_finetune_model()
     if flag_retrain or only_evaluate_history_model_flag:
         model.load_weights(trained_model_path)
