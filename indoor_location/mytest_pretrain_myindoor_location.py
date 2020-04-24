@@ -6,6 +6,7 @@ import keras_bert
 from indoor_location import hyper_parameters as hp
 from indoor_location import utils
 from indoor_location import globalConfig
+from keras_bert.backend import keras
 
 # from keras_bert.optimizers import AdamWarmup
 # from sklearn.preprocessing import LabelBinarizer
@@ -18,13 +19,10 @@ from indoor_location import globalConfig
 # valid_ibeacon_num = 26 #有效的ap数量
 # # seqence_len = valid_ibeacon_num*2+3   # 因为tokens = [TOKEN_CLS] + first + [TOKEN_SEP] + second + [TOKEN_SEP]
 # seqence_len = valid_ibeacon_num + 1  # 因为tokens = [TOKEN_CLS] + first
-pretrain_train_datafile_path = ".\\data\\sampleset_data\\train_dataset1.csv"
-pretrain_valid_datafile_path = ".\\data\\sampleset_data\\valid_dataset1.csv"
+pretrain_train_datafile_path = "./data/sampleset_data/new_3days1/train_dataset1.csv"
+pretrain_valid_datafile_path = ".\\data\\sampleset_data\\7days\\valid_dataset1.csv"
 
-
-trained_model_index = "2"
-pretrained_model_index = "5"
-pretrained_model_path = ".\\logs\\pretrained_bert" + pretrained_model_index + ".h5"
+pretrained_model_path = ".\\logs\\pretrained_bert2.h5"
 
 # pretrained_path = ".\\logs"
 # config_path = os.path.join(pretrained_path, 'mybert_config.json')
@@ -37,8 +35,8 @@ pretrained_model_path = ".\\logs\\pretrained_bert" + pretrained_model_index + ".
 word_id_map_file_path = globalConfig.word_id_map_file_path
 
 flag_retrain = True
-EPOCHS = 1000
-LR = 0.05
+EPOCHS = 10
+LR = 0.5
 decay_steps = 30000
 warmup_steps = 10000
 weight_decay = 1e-3
@@ -63,25 +61,30 @@ def bert_indoorlocation_pretrain():
         print("compiling model .....")
         model = keras_bert.my_get_model(
             token_num=len(word2id_dict),
-            head_num=2,
-            transformer_num=4,
-            embed_dim=16,
-            feed_forward_dim=100,
+            head_num=hp.head_num,
+            transformer_num=hp.transformer_num,
+            embed_dim=hp.embed_dim,
+            feed_forward_dim=hp.feed_forward_dim,
+            dropout_rate=hp.dropout_rate,
             seq_len=hp.seq_len,
             pos_num=hp.seq_len,
-            dropout_rate=0.05,
             attention_activation='gelu',
         )
         if flag_retrain:
             model.load_weights(pretrained_model_path)
 
-        # 初始化模型和参数
-        keras_bert.compile_model(
-            model,
-            learning_rate=LR,
-            decay_steps=decay_steps,
-            warmup_steps=warmup_steps,
-            weight_decay=weight_decay,
+        # # 初始化模型和参数
+        # keras_bert.compile_model(
+        #     model,
+        #     learning_rate=LR,
+        #     decay_steps=decay_steps,
+        #     warmup_steps=warmup_steps,
+        #     weight_decay=weight_decay,
+        # )
+        model.compile(
+            optimizer=keras.optimizers.RMSprop(0.001),
+            # loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
+            loss=keras.losses.sparse_categorical_crossentropy
         )
         model.summary()
             # data = model.to_json()
@@ -118,9 +121,11 @@ def bert_indoorlocation_pretrain():
         print("training network...")
         # Train the model with the new callback
         from keras.callbacks import EarlyStopping
-        early_stopping = EarlyStopping(monitor="val_loss", patience=5)
+        early_stopping = EarlyStopping(monitor="loss", patience=5)
         # H = model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
         #               batch_size=128, epochs=EPOCHS, callbacks=[early_stopping])
+        H = model.fit(x_train, y_train,
+                      batch_size=128, epochs=EPOCHS, callbacks=[early_stopping])
 
         # saver = tf.train.Saver()
         # saver.save(session, checkpoint_path)
@@ -181,7 +186,7 @@ def bert_indoorlocation_pretrain():
         # predicts_mlm_ids = np.argmax(predicts[0], axis=-1)
         # real_mlm_ids = list(map(lambda x: np.squeeze(x, axis=-1), y_train[0]))
         # utils.evaluate_pretrain_model(predicts_mlm_ids, real_mlm_ids)
-        utils.evaluate_pretrain_model(model, x_test=x_valid, y_test=y_valid)
+        utils.evaluate_pretrain_model(model, x_test=x_valid, y_test=y_valid, id2word_dict=id2word_dict)
 
 
 

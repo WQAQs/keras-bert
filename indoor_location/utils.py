@@ -345,55 +345,66 @@ def get_strimed_data_from_sentences_for_pretrain(dataset_file,
     return inputs, outputs
 
 
-def gen_fine_tune_bert_data(dataset_file,seqence_len):
+def gen_fine_tune_bert_data(dataset_file,seq_len):
     # 准备训练集数据和验证集数据
-    sentences, labels, reference_tags = load_dataset(dataset_file)
-    token_dict = get_base_dict()
-    for s in sentences:
-        for token in s:
-            if token not in token_dict:
-                token_dict[token] = len(token_dict)
-    def gen_batch_inputs(sentences,
-                         labels,
-                         token_dict,
-                         seq_len=512,
-                         ):
-        """Generate a batch of inputs and outputs for training.
+    # sentences, labels, reference_tags = load_dataset(dataset_file)
+    csv = pd.read_csv(dataset_file)
+    sentences = csv["mac_rssi_sentence"].values.tolist()
+    sentence_list = csvstr2list(sentences)
+    strim_and_padding(sentence_list, seq_len)
 
-        :param sentences: A list of pairs containing lists of tokens.
-        :param token_dict: The dictionary containing special tokens.
-        :param token_list: A list containing all tokens.
-        :param seq_len: Length of the sequence.
-        :param mask_rate: The rate of choosing a token for prediction.
-        :param mask_mask_rate: The rate of replacing the token to `TOKEN_MASK`.
-        :param mask_random_rate: The rate of replacing the token to a random word.
-        :param swap_sentence_rate: The rate of swapping the second sentences.
-        :param force_mask: At least one position will be masked.
-        :return: All the inputs and outputs.
-        """
-        batch_size = len(sentences)
-        unknown_index = token_dict[TOKEN_UNK]
-        token_inputs, segment_inputs = [], []
-        for i in range(batch_size):
-            first = sentences[i]
-            segment_inputs.append(([0] * (len(first) + 2))[:seq_len])
-            tokens = [TOKEN_CLS] + first + [TOKEN_SEP]
-            tokens = tokens[:seq_len]
-            tokens += [TOKEN_PAD] * (seq_len - len(tokens))
-            token_input, masked_input, mlm_output = [], [], []
-            for token in tokens:
-                token_input.append(token_dict.get(token, unknown_index))
-            token_inputs.append(token_input)
-        inputs = [np.asarray(x) for x in [token_inputs, segment_inputs]]
-        outputs = labels
-        # outputs = [np.asarray(np.expand_dims(x, axis=-1)) for x in [mlm_outputs, nsp_outputs]]
-        return inputs, outputs
-    x_train, y_train = gen_batch_inputs(
-                    sentences,
-                    labels,
-                    token_dict,
-                    seq_len=seqence_len
-                )
+    coordinate_x = csv["coordinate_x"].values.tolist()
+    coordinate_y = csv["coordinate_y"].values.tolist()
+    labels = csv[["coordinate_x", "coordinate_y"]].values # 已经是array了
+    reference_tags = csv['reference_tag'].values.tolist()
+    #
+    # token_dict = get_base_dict()
+    # for s in sentences:
+    #     for token in s:
+    #         if token not in token_dict:
+    #             token_dict[token] = len(token_dict)
+    # def gen_batch_inputs(sentences,
+    #                      labels,
+    #                      token_dict,
+    #                      seq_len=512,
+    #                      ):
+    #     """Generate a batch of inputs and outputs for training.
+    #
+    #     :param sentences: A list of pairs containing lists of tokens.
+    #     :param token_dict: The dictionary containing special tokens.
+    #     :param token_list: A list containing all tokens.
+    #     :param seq_len: Length of the sequence.
+    #     :param mask_rate: The rate of choosing a token for prediction.
+    #     :param mask_mask_rate: The rate of replacing the token to `TOKEN_MASK`.
+    #     :param mask_random_rate: The rate of replacing the token to a random word.
+    #     :param swap_sentence_rate: The rate of swapping the second sentences.
+    #     :param force_mask: At least one position will be masked.
+    #     :return: All the inputs and outputs.
+    #     """
+    #     batch_size = len(sentences)
+    #     unknown_index = token_dict[TOKEN_UNK]
+    #     token_inputs, segment_inputs = [], []
+    #     for i in range(batch_size):
+    #         first = sentences[i]
+    #         segment_inputs.append(([0] * (len(first) + 2))[:seq_len])
+    #         tokens = [TOKEN_CLS] + first + [TOKEN_SEP]
+    #         tokens = tokens[:seq_len]
+    #         tokens += [TOKEN_PAD] * (seq_len - len(tokens))
+    #         token_input, masked_input, mlm_output = [], [], []
+    #         for token in tokens:
+    #             token_input.append(token_dict.get(token, unknown_index))
+    #         token_inputs.append(token_input)
+    #     inputs = [np.asarray(x) for x in [token_inputs, segment_inputs]]
+    #     outputs = labels
+    #     # outputs = [np.asarray(np.expand_dims(x, axis=-1)) for x in [mlm_outputs, nsp_outputs]]
+    #     return inputs, outputs
+    # x_train, y_train = gen_batch_inputs(
+    #                 sentences,
+    #                 labels,
+    #                 token_dict,
+    #                 seq_len=seq_len
+    #             )
+    x_train, y_train = np.asarray(sentence_list), labels
     return x_train, y_train, reference_tags
 
 def get_base_id2token_dict():
@@ -422,21 +433,21 @@ def id_list2token_list(id_list, id_dict):
     return token_list
 
 
-def all_id_lists2all_token_lists(sentences_id_data):
+def all_id_lists2all_token_lists(sentences_id_data,id2word_dict):
     sentences_token_data = []
     for item in sentences_id_data:
-        token_list = id_list2token_list(item, rssi_id_dict)
+        token_list = id_list2token_list(item, id2word_dict)
         sentences_token_data.append(token_list)
     return sentences_token_data
 
-def evaluate_pretrain_model(model,x_test,y_test):
+def evaluate_pretrain_model(model,x_test,y_test,id2word_dict):
     predicts = model.predict(x_test)
     # predicts_mlm_ids = np.argmax(predicts[0], axis=-1)
     predicts_mlm_ids = np.argmax(predicts, axis=-1)
     # real_mlm_ids = list(map(lambda x: np.squeeze(x, axis=-1), y_test[0]))
     real_mlm_ids = list(map(lambda x: np.squeeze(x, axis=-1), y_test))
-    predicts_mlm_tokens = all_id_lists2all_token_lists(predicts_mlm_ids)
-    real_mlm_tokens = all_id_lists2all_token_lists(real_mlm_ids)
+    predicts_mlm_tokens = all_id_lists2all_token_lists(predicts_mlm_ids,id2word_dict)
+    real_mlm_tokens = all_id_lists2all_token_lists(real_mlm_ids,id2word_dict)
 
     samples_num, seq_len = x_test[0].shape
     all_match_res = []
@@ -479,9 +490,11 @@ def evaluate_fine_tune_model(predicts_location, labels_location, reference_tags)
                                                 'true_coordinates_x', 'true_coordinates_y'])
 
     error_distance = list(map(calculate_distance, results))
-    error_distance = np.array(error_distance)
-    error_distance_bypoint = np.hstack((error_distance.reshape(-1, 1), reference_tags.reshape(-1, 1)))
-    error_distance_bypoint_df = pd.DataFrame(error_distance_bypoint, columns=['error_distance', 'point_reference_tag'])
+    # error_distance = np.array(error_distance)
+    # error_distance_bypoint = np.hstack((error_distance.reshape(-1, 1), reference_tags.reshape(-1, 1)))
+    # error_distance_bypoint_df = pd.DataFrame(error_distance_bypoint, columns=['error_distance', 'point_reference_tag'])
+    error_distance_bypoint_df = pd.DataFrame(data={"error_distance": error_distance,
+                                                   "point_reference_tag": reference_tags})
 
     evaluate_df = pd.concat([results_df, error_distance_bypoint_df], axis=1)
     evaluate_df.to_csv(evaluate_prediction_file)   # 保存evaluate_df到csv文件
@@ -521,14 +534,25 @@ def evaluate_fine_tune_model(predicts_location, labels_location, reference_tags)
 
 def cdf(data):
     # pd.DataFrame(data).to_csv("erro_cdf_dist.csv", header=None, index=False)
-    hist, bins = np.histogram(data, 100)
+    hist, bins = np.histogram(data, 1000)
     bins = bins[1:]
+    flag1,flag2,flag3 = True,True,True
     for i in range(1, len(hist)):
         hist[i] = hist[i]+hist[i-1]
+        if flag1 and bins[i] > 1.0:
+            y1 = hist[i]/len(data)
+            flag1 = False
+        if flag2 and bins[i] >2.0:
+            y2 = hist[i]/len(data)
+            flag2 = False
+        if flag3 and bins[i] > 3.0:
+            y3 = hist[i]/len(data)
+            flag3 = False
+
     hist = hist/len(data)
     plt.figure()
     # 设置坐标轴刻度
-    my_x_ticks = np.arange(0, 10, 1)
+    my_x_ticks = np.arange(0, 26, 1)
     my_y_ticks = np.arange(0, 1.1, 0.1)
     plt.xticks(my_x_ticks)
     plt.yticks(my_y_ticks)
@@ -536,6 +560,8 @@ def cdf(data):
     plt.xlabel('Prediction Distance Error (/m)')
     plt.ylabel('CDF')
     plt.plot(bins, hist)
+    text = '{:.2f}<=1m  {:.2f}<=2m  {:.2f}<=3m'.format(y1, y2, y3)
+    plt.text(8,0.8,text)
     plt.savefig(savefig_error_cdf_file)
     # plt.show()
 

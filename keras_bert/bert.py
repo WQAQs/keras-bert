@@ -454,7 +454,7 @@ def my_get_model(token_num,
         # if use_task_embed:
         #     inputs = inputs[:3]
         # else:
-        inputs = inputs[:2]
+        inputs = inputs[:1]
         model = keras.models.Model(inputs=inputs, outputs=transformed)
         for layer in model.layers:
             layer.trainable = _trainable(layer)
@@ -489,21 +489,22 @@ def compile_model(model,
     :param learning_rate: Learning rate.
     :return: The compiled model.
     """
-    # model.compile(
-    #     optimizer=AdamWarmup(
-    #         decay_steps=decay_steps,
-    #         warmup_steps=warmup_steps,
-    #         learning_rate=learning_rate,
-    #         weight_decay=weight_decay,
-    #         weight_decay_pattern=['embeddings', 'kernel', 'W1', 'W2', 'Wk', 'Wq', 'Wv', 'Wo'],
-    #     ),
-    #     loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
-    # )
     model.compile(
-        optimizer=keras.optimizers.RMSprop(0.001),
+        optimizer=AdamWarmup(
+            decay_steps=decay_steps,
+            warmup_steps=warmup_steps,
+            learning_rate=learning_rate,
+            weight_decay=weight_decay,
+            weight_decay_pattern=['embeddings', 'kernel', 'W1', 'W2', 'Wk', 'Wq', 'Wv', 'Wo'],
+        ),
         # loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
         loss=keras.losses.sparse_categorical_crossentropy
     )
+    # model.compile(
+    #     optimizer=keras.optimizers.RMSprop(0.001),
+    #     # loss=[keras.losses.sparse_categorical_crossentropy, keras.losses.mean_squared_error]
+    #     loss=keras.losses.sparse_categorical_crossentropy
+    # )
 
 
 def get_custom_objects():

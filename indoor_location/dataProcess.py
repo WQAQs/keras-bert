@@ -54,6 +54,12 @@ def load_all_txt2csv(txt_rootdir, csv_rootdir):
                 rawPoints_file_path = os.path.join(classPath, txt)
                 txt2csv(rawPoints_file_path, dist_class_path)
 
+def merge_dataset(set_file_path1,set_file_path2,merged_file_path):
+    df1 = pd.read_csv(set_file_path1)
+    df2 = pd.read_csv(set_file_path2)
+    df = pd.concat([df1, df2])
+    shuffle(df)
+    df.to_csv(merged_file_path)
 
 def merge_all_csv(original_csv_rootdir, plus_csv_rootdir):
     """
@@ -358,7 +364,7 @@ def csv2sample_data_mac_rssi_word(referencePoint_csv, reference_tag, coordinate_
     begin_time = referencePoint_csv.iloc[0][0]  # 分段的开始时间
     for row in referencePoint_csv.itertuples():
         ######### 数据超出一个样本的时间，就保存一个样本到样本集 #########
-        if row.time > begin_time + timeInterval:
+        if row.time > begin_time + timeInterval and len(one_sample_mac_rssi) >= 10:  #控制一个样本中有效的ap包数大于10
             one_sample.append(reference_tag)
             one_sample.append(coordinate_x)
             one_sample.append(coordinate_y)
