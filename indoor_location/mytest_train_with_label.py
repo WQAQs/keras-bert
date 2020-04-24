@@ -124,13 +124,15 @@ def run_experiment_different_label_rate():
         if only_evaluate_history_model_flag:
             utils.evaluate_fine_tune_model(model, test_datafile_path,results_dir)
         else:
-            model.fit(
+            hist = model.fit(
                 x_train,
                 y_train,
                 epochs=EPOCHS,
                 batch_size=BATCH_SIZE,
                 callbacks=[early_stopping]
             )
+            with open(results_dir+'/log_loss.txt', 'w') as f:
+                f.write(str(hist.history))
             model.save(trained_model_path)
             utils.evaluate_fine_tune_model(model, test_datafile_path,results_dir)
 
