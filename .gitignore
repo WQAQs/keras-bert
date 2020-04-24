@@ -114,3 +114,6 @@ venv.bak/
 
 # Models
 *.h5
+/indoor_location/data/resource_data/
+/indoor_location/data/resource_data/
+/indoor_location/data/resource_data/
