@@ -50,9 +50,9 @@ trained_model_path = ".\\logs\\trained1_bert.h5"
 # config_path = 'mybert_config.json'
 # checkpoint_path = 'mybert_model.ckpt'
 
-flag_retrain = True
-only_evaluate_history_model_flag = True
-LR = 0.001
+flag_retrain = False
+only_evaluate_history_model_flag = False
+LR = 0.05
 EPOCHS = 100
 BATCH_SIZE = 128
 
@@ -97,7 +97,7 @@ def get_finetune_model():
 
 def run_experiment_different_label_rate():
     label_rate = [0.005, 0.01, 0.1, 0.5, 0.9, 1.0]
-    dist_dir = ''.join(pretrain_train_datafile_path.split('/')[:-1])  #得到上一级目录
+    dist_dir = '/'.join(pretrain_train_datafile_path.split('/')[:-1])  #得到上一级目录
     if not os.path.exists(dist_dir+'/label_rate'):
         os.makedirs(dist_dir+'/label_rate')
     model = get_finetune_model()
@@ -114,11 +114,15 @@ def run_experiment_different_label_rate():
     )
     early_stopping = keras.callbacks.EarlyStopping(monitor="loss", patience=5)
     for x in label_rate:
-        target_label_file = '/'.join(dist_dir, str(x)+'.csv')
+        str1 = '_'.join(str(x).split('.'))
+        target_label_file = '/'.join([dist_dir, str1+'.csv'])
         utils.gen_label_rate_dataset_file(pretrain_train_datafile_path, x, target_label_file)
         x_train, y_train, reference_tags_train = utils.gen_fine_tune_bert_data(target_label_file, seq_len)
+        results_dir = '/'.join(['./logs/record_results', str1])
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
         if only_evaluate_history_model_flag:
-            utils.evaluate_fine_tune_model(model, test_datafile_path)
+            utils.evaluate_fine_tune_model(model, test_datafile_path,results_dir)
         else:
             model.fit(
                 x_train,
@@ -128,7 +132,7 @@ def run_experiment_different_label_rate():
                 callbacks=[early_stopping]
             )
             model.save(trained_model_path)
-            utils.evaluate_fine_tune_model(model, test_datafile_path)
+            utils.evaluate_fine_tune_model(model, test_datafile_path,results_dir)
 
 def bert_indoorlocation_train_with_label():
     config = tf.ConfigProto(allow_soft_placement=True)

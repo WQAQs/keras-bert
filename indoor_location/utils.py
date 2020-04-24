@@ -563,12 +563,12 @@ def evaluate_fine_tune_model(model, evaluate_file, results_dir):
                                                    "point_reference_tag": reference_tags})
 
     evaluate_df = pd.concat([results_df, error_distance_bypoint_df], axis=1)
-    evaluate_df.to_csv('/'.join(results_dir, evaluate_prediction_file_name))   # 保存evaluate_df到csv文件
+    evaluate_df.to_csv('/'.join([results_dir, evaluate_prediction_file_name]))   # 保存evaluate_df到csv文件
 
     error_over1m_df = error_distance_bypoint_df[error_distance_bypoint_df['error_distance'] > 1.0]
     error_over1m_df = error_over1m_df.sort_values(by='error_distance')
     error_mean = error_over1m_df['error_distance'].mean()
-    error_over1m_df.to_csv('/'.join(results_dir, error_distance_over1m_file_name), index=False, encoding='utf-8')   # 保存error_over1m_df到csv文件
+    error_over1m_df.to_csv('/'.join([results_dir, error_distance_over1m_file_name]), index=False, encoding='utf-8')   # 保存error_over1m_df到csv文件
 
     # 绘制error_distribution图
     plt.figure()
@@ -576,7 +576,7 @@ def evaluate_fine_tune_model(model, evaluate_file, results_dir):
     plt.scatter(list(range(0, error_len)), error_distance, s=6)
     plt.title("Prediction Distance Error By Point")
     plt.ylabel("Prediction Distance Error(/m)")
-    plt.savefig('/'.join(results_dir, savefig_error_distribution_file_name))
+    plt.savefig('/'.join([results_dir, savefig_error_distribution_file_name]))
     # plt.show()
 
     groupby_df = evaluate_df.groupby(['point_reference_tag'])
@@ -592,7 +592,7 @@ def evaluate_fine_tune_model(model, evaluate_file, results_dir):
     plt.ylabel('coordinate_y(/m)')
     plt.axis('equal')
     plt.axis('square')
-    plt.savefig('/'.join(results_dir, savefig_coordinates_distribution_file_name))
+    plt.savefig('/'.join([results_dir, savefig_coordinates_distribution_file_name]))
     # plt.show()  # 在pycharm中显示绘图的窗口
 
     # 绘制error cdf图
@@ -628,7 +628,7 @@ def cdf(data, target_dir):
     plt.plot(bins, hist)
     text = '{:.2f}<=1m  {:.2f}<=2m  {:.2f}<=3m'.format(y1, y2, y3)
     plt.text(8,0.8,text)
-    plt.savefig('/'.join(target_dir, savefig_error_cdf_file_name))
+    plt.savefig('/'.join([target_dir, savefig_error_cdf_file_name]))
     # plt.show()
 
 # file_name = ".\\data\\sampleset_data\\trainset_day20-1-8_points20_average_interval_500ms.csv"
