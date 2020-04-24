@@ -9,6 +9,7 @@ import keras_bert
 from indoor_location import hyper_parameters as hp
 from indoor_location import globalConfig
 import ast
+from sklearn.utils import shuffle
 
 TOKEN_PAD = ''  # Token for padding
 TOKEN_UNK = '[UNK]'  # Token for unknown words
@@ -30,14 +31,20 @@ all_match_res_file_path = ".\\logs\\all_match_res.csv"
 all_predicts_mlm_tokens_file_path = ".\\logs\\all_predicts_mlm_tokens.csv"
 all_real_mlm_tokens_file_path = ".\\logs\\all_real_mlm_tokens.csv"
 
-evaluate_prediction_file = ".\\logs\\evaluate_prediction.csv"
-error_distance_over1m_file = ".\\logs\\error_distance_over1m.csv"
-savefig_error_distribution_file = ".\\logs\\savefig_error_distribution.png"
-savefig_coordinates_distribution_file = ".\\logs\\savefig_coordinates_distribution.png"
-savefig_error_cdf_file = ".\\logs\\savefig_error_cdf.png"
+evaluate_prediction_file_name = "evaluate_prediction.csv"
+error_distance_over1m_file_name = "error_distance_over1m.csv"
+savefig_error_distribution_file_name = "savefig_error_distribution.png"
+savefig_coordinates_distribution_file_name = "savefig_coordinates_distribution.png"
+savefig_error_cdf_file_name = "savefig_error_cdf.png"
 
 rssi_token_dict, rssi_id_dict = {}, {}
 ap_token_dict, ap_id_dict = {}, {}
+
+def gen_label_rate_dataset_file(origin_file, label_rate, target_file):
+    df = pd.read_csv(origin_file)
+    shuffle(df)
+    df.sample(frac=label_rate, random_state=0).to_csv(target_file)
+
 
 def load_dataset(dataset_file):
     dataset = pd.read_csv(dataset_file)
@@ -484,25 +491,84 @@ def calculate_distance(result):
     error_distance = math.sqrt(error_x2 + error_y2)  # 求平方根
     return error_distance
 
-def evaluate_fine_tune_model(predicts_location, labels_location, reference_tags):
+def calculate_distance(result):
+    pred_coordinatesx,pred_coordinatesy = result[0], result[1]
+    true_coordinatesx,true_coordinatesy = result[2], result[3]
+    error_x2, error_y2 = math.pow(pred_coordinatesx - true_coordinatesx, 2), \
+                         math.pow(pred_coordinatesy - true_coordinatesy, 2)
+    error_distance = math.sqrt(error_x2 + error_y2)  # 求平方根
+    return error_distance
+
+# def evaluate_fine_tune_model(predicts_location, labels_location, reference_tags):
+#     results = np.hstack((predicts_location, labels_location))
+#     results_df = pd.DataFrame(results, columns=['pred_coordinates_x', 'pred_coordinates_y',
+#                                                 'true_coordinates_x', 'true_coordinates_y'])
+#
+#     error_distance = list(map(calculate_distance, results))
+#     # error_distance = np.array(error_distance)
+#     # error_distance_bypoint = np.hstack((error_distance.reshape(-1, 1), reference_tags.reshape(-1, 1)))
+#     # error_distance_bypoint_df = pd.DataFrame(error_distance_bypoint, columns=['error_distance', 'point_reference_tag'])
+#     error_distance_bypoint_df = pd.DataFrame(data={"error_distance": error_distance,
+#                                                    "point_reference_tag": reference_tags})
+#
+#     evaluate_df = pd.concat([results_df, error_distance_bypoint_df], axis=1)
+#     evaluate_df.to_csv(evaluate_prediction_file)   # 保存evaluate_df到csv文件
+#
+#     error_over1m_df = error_distance_bypoint_df[error_distance_bypoint_df['error_distance'] > 1.0]
+#     error_over1m_df = error_over1m_df.sort_values(by='error_distance')
+#     error_mean = error_over1m_df['error_distance'].mean()
+#     error_over1m_df.to_csv(error_distance_over1m_file, index=False, encoding='utf-8')   # 保存error_over1m_df到csv文件
+#
+#     # 绘制error_distribution图
+#     plt.figure()
+#     error_len = len(error_distance)
+#     plt.scatter(list(range(0, error_len)), error_distance, s=6)
+#     plt.title("Prediction Distance Error By Point")
+#     plt.ylabel("Prediction Distance Error(/m)")
+#     plt.savefig(savefig_error_distribution_file)
+#     # plt.show()
+#
+#     groupby_df = evaluate_df.groupby(['point_reference_tag'])
+#     true_coordinates_x, true_coordinates_y = evaluate_df['true_coordinates_x'].values.tolist(), evaluate_df['true_coordinates_y'].values.tolist()
+#
+#     # 绘制coordinates_distribution图
+#     plt.figure()
+#     for point_reference_tag, group_data in groupby_df:
+#         pred_coordinates_x, pred_coordinates_y = group_data['pred_coordinates_x'].values.tolist(), group_data['pred_coordinates_y'].values.tolist()
+#         plt.scatter(pred_coordinates_x, pred_coordinates_y, s=6)
+#     plt.scatter(true_coordinates_x, true_coordinates_y, s=18, marker='p')
+#     plt.xlabel('coordinate_x(/m)')
+#     plt.ylabel('coordinate_y(/m)')
+#     plt.axis('equal')
+#     plt.axis('square')
+#     plt.savefig(savefig_coordinates_distribution_file)
+#     # plt.show()  # 在pycharm中显示绘图的窗口
+#
+#     # 绘制error cdf图
+#     cdf(error_distance)
+
+
+def evaluate_fine_tune_model(model, evaluate_file, results_dir):
+    x_test, y_test, reference_tags_test = gen_fine_tune_bert_data(evaluate_file, hp.seq_len)
+    predicts_location = model.predict(x_test)
+    labels_location = y_test
+    reference_tags = reference_tags_test
+
     results = np.hstack((predicts_location, labels_location))
     results_df = pd.DataFrame(results, columns=['pred_coordinates_x', 'pred_coordinates_y',
                                                 'true_coordinates_x', 'true_coordinates_y'])
 
     error_distance = list(map(calculate_distance, results))
-    # error_distance = np.array(error_distance)
-    # error_distance_bypoint = np.hstack((error_distance.reshape(-1, 1), reference_tags.reshape(-1, 1)))
-    # error_distance_bypoint_df = pd.DataFrame(error_distance_bypoint, columns=['error_distance', 'point_reference_tag'])
     error_distance_bypoint_df = pd.DataFrame(data={"error_distance": error_distance,
                                                    "point_reference_tag": reference_tags})
 
     evaluate_df = pd.concat([results_df, error_distance_bypoint_df], axis=1)
-    evaluate_df.to_csv(evaluate_prediction_file)   # 保存evaluate_df到csv文件
+    evaluate_df.to_csv('/'.join(results_dir, evaluate_prediction_file_name))   # 保存evaluate_df到csv文件
 
     error_over1m_df = error_distance_bypoint_df[error_distance_bypoint_df['error_distance'] > 1.0]
     error_over1m_df = error_over1m_df.sort_values(by='error_distance')
     error_mean = error_over1m_df['error_distance'].mean()
-    error_over1m_df.to_csv(error_distance_over1m_file, index=False, encoding='utf-8')   # 保存error_over1m_df到csv文件
+    error_over1m_df.to_csv('/'.join(results_dir, error_distance_over1m_file_name), index=False, encoding='utf-8')   # 保存error_over1m_df到csv文件
 
     # 绘制error_distribution图
     plt.figure()
@@ -510,7 +576,7 @@ def evaluate_fine_tune_model(predicts_location, labels_location, reference_tags)
     plt.scatter(list(range(0, error_len)), error_distance, s=6)
     plt.title("Prediction Distance Error By Point")
     plt.ylabel("Prediction Distance Error(/m)")
-    plt.savefig(savefig_error_distribution_file)
+    plt.savefig('/'.join(results_dir, savefig_error_distribution_file_name))
     # plt.show()
 
     groupby_df = evaluate_df.groupby(['point_reference_tag'])
@@ -520,19 +586,19 @@ def evaluate_fine_tune_model(predicts_location, labels_location, reference_tags)
     plt.figure()
     for point_reference_tag, group_data in groupby_df:
         pred_coordinates_x, pred_coordinates_y = group_data['pred_coordinates_x'].values.tolist(), group_data['pred_coordinates_y'].values.tolist()
-        plt.scatter(pred_coordinates_x, pred_coordinates_y, s=6)
+        plt.scatter(pred_coordinates_x, pred_coordinates_y, s=3)
     plt.scatter(true_coordinates_x, true_coordinates_y, s=18, marker='p')
     plt.xlabel('coordinate_x(/m)')
     plt.ylabel('coordinate_y(/m)')
     plt.axis('equal')
     plt.axis('square')
-    plt.savefig(savefig_coordinates_distribution_file)
+    plt.savefig('/'.join(results_dir, savefig_coordinates_distribution_file_name))
     # plt.show()  # 在pycharm中显示绘图的窗口
 
     # 绘制error cdf图
-    cdf(error_distance)
+    cdf(error_distance, results_dir)
 
-def cdf(data):
+def cdf(data, target_dir):
     # pd.DataFrame(data).to_csv("erro_cdf_dist.csv", header=None, index=False)
     hist, bins = np.histogram(data, 1000)
     bins = bins[1:]
@@ -562,7 +628,7 @@ def cdf(data):
     plt.plot(bins, hist)
     text = '{:.2f}<=1m  {:.2f}<=2m  {:.2f}<=3m'.format(y1, y2, y3)
     plt.text(8,0.8,text)
-    plt.savefig(savefig_error_cdf_file)
+    plt.savefig('/'.join(target_dir, savefig_error_cdf_file_name))
     # plt.show()
 
 # file_name = ".\\data\\sampleset_data\\trainset_day20-1-8_points20_average_interval_500ms.csv"

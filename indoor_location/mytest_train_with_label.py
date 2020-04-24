@@ -25,9 +25,10 @@ seq_len = hp.seq_len
 # train_datafile_name = "..\\data\\sampleset_data\\trainset_day20-1-8_points20_average_interval_500ms.csv"
 # test_datafile_name = "..\\data\\sampleset_data\\sampleset_1days_21points_average_interval_500ms.csv"
 
-train_datafile_name = "./data/sampleset_data/new_3days1/valid_dataset1.csv"
-valid_datafile_name = ".\\data\\sampleset_data\\7days\\valid_dataset1.csv"
-test_datafile_name = "./data/sampleset_data/new_3days2/train_dataset1.csv"
+pretrain_train_datafile_path = "./data/sampleset_data/new_3days1/pretrain_dataset.csv"
+train_datafile_path = "./data/sampleset_data/new_3days1/valid_dataset1.csv"
+valid_datafile_path = ".\\data\\sampleset_data\\7days\\valid_dataset1.csv"
+test_datafile_path = "./data/sampleset_data/new_3days2/train_dataset1.csv"
 # \\1days\\sampleset_1days_20points_mac_rssi_word.csv
 # token_id_from_numerical_order_file_path = ".\\logs\\token_id_from_numerical_order.csv"
 # token_id_from_dataset_order_file_path = ".\\logs\\token_id_from_dataset__order1.csv"
@@ -70,6 +71,65 @@ def get_base_id2token_dict():
         4: TOKEN_MASK,
     }
 
+def get_finetune_model():
+    word2id_dict, id2word_dict = utils.get_word_id_map(word_id_map_file_path)
+    input_layer, transformed = keras_bert.my_get_model(
+        token_num=len(word2id_dict),
+        head_num=hp.head_num,
+        transformer_num=hp.transformer_num,
+        embed_dim=hp.embed_dim,
+        feed_forward_dim=hp.feed_forward_dim,
+        dropout_rate=hp.dropout_rate,
+        seq_len=hp.seq_len,
+        pos_num=hp.seq_len,
+        attention_activation='gelu',
+        training=False,  ### !!!!!!!一定不能忘记设置为False！！！！！！！！！
+        trainable=True
+    )
+    # output_layer = model.inputs[:2]
+    # dense = model.get_layer('Encoder-2-FeedForward-Norm').output
+    # output_layer = keras.layers.Dense(units=2, activation='relu')(dense)
+    extract_layer = Extract(index=0, name='Extract')(transformed)
+    # coor_dense = keras.layers.Dense(units=embed_dim, activation="relu", name="coor_dense")(transformed)
+    output_layer = keras.layers.Dense(units=2, activation="relu", name="coor_output")(extract_layer)
+    model = keras.models.Model(inputs=input_layer, outputs=output_layer)
+    return model
+
+def run_experiment_different_label_rate():
+    label_rate = [0.005, 0.01, 0.1, 0.5, 0.9, 1.0]
+    dist_dir = ''.join(pretrain_train_datafile_path.split('/')[:-1])  #得到上一级目录
+    if not os.path.exists(dist_dir+'/label_rate'):
+        os.makedirs(dist_dir+'/label_rate')
+    model = get_finetune_model()
+    if flag_retrain or only_evaluate_history_model_flag:
+        model.load_weights(trained_model_path)
+    else:
+        model.load_weights(pretrained_model_path, by_name=True)
+    model.summary()
+    optimizer = keras.optimizers.RMSprop(LR)
+    model.compile(
+        optimizer=optimizer,
+        loss='mse',
+        metrics=['mae', 'mse'],
+    )
+    early_stopping = keras.callbacks.EarlyStopping(monitor="loss", patience=5)
+    for x in label_rate:
+        target_label_file = '/'.join(dist_dir, str(x)+'.csv')
+        utils.gen_label_rate_dataset_file(pretrain_train_datafile_path, x, target_label_file)
+        x_train, y_train, reference_tags_train = utils.gen_fine_tune_bert_data(target_label_file, seq_len)
+        if only_evaluate_history_model_flag:
+            utils.evaluate_fine_tune_model(model, test_datafile_path)
+        else:
+            model.fit(
+                x_train,
+                y_train,
+                epochs=EPOCHS,
+                batch_size=BATCH_SIZE,
+                callbacks=[early_stopping]
+            )
+            model.save(trained_model_path)
+            utils.evaluate_fine_tune_model(model, test_datafile_path)
+
 def bert_indoorlocation_train_with_label():
     config = tf.ConfigProto(allow_soft_placement=True)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
@@ -77,9 +137,9 @@ def bert_indoorlocation_train_with_label():
 
     # 准备训练集数据和验证集数据
     word2id_dict, id2word_dict = utils.get_word_id_map(word_id_map_file_path)
-    x_train, y_train, reference_tags_train = utils.gen_fine_tune_bert_data(train_datafile_name, seq_len)
-    x_valid, y_valid, reference_tags_valid = utils.gen_fine_tune_bert_data(valid_datafile_name, seq_len)
-    x_test, y_test, reference_tags_test = utils.gen_fine_tune_bert_data(test_datafile_name, seq_len)
+    x_train, y_train, reference_tags_train = utils.gen_fine_tune_bert_data(train_datafile_path, seq_len)
+    x_valid, y_valid, reference_tags_valid = utils.gen_fine_tune_bert_data(valid_datafile_path, seq_len)
+    # x_test, y_test, reference_tags_test = utils.gen_fine_tune_bert_data(test_datafile_name, seq_len)
 
     # x_train, y_train = np.array(x_train), np.array(y_train)
     # x_train = x_train.reshape((x_train.shape[0], x_train.shape[1], x_train.shape[2], 1))
@@ -154,15 +214,18 @@ def bert_indoorlocation_train_with_label():
         # reference_tags = reference_tags_train
         # evaluate_fine_tune_model(predicts, labels, reference_tags)
 
-        predicts = model.predict(x_test)
-        labels = y_test
-        reference_tags = reference_tags_test
-        utils.evaluate_fine_tune_model(predicts, labels, reference_tags)
+        # predicts = model.predict(x_test)
+        # labels = y_test
+        # reference_tags = reference_tags_test
+        # utils.evaluate_fine_tune_model(predicts, labels, reference_tags)
+        utils.evaluate_fine_tune_model(model, test_datafile_path)
     else:
-        predicts = model.predict(x_test)
-        labels = y_test
-        reference_tags = reference_tags_test
-        utils.evaluate_fine_tune_model(predicts, labels, reference_tags)
+        # predicts = model.predict(x_test)
+        # labels = y_test
+        # reference_tags = reference_tags_test
+        # utils.evaluate_fine_tune_model(predicts, labels, reference_tags)
+        utils.evaluate_fine_tune_model(model, test_datafile_path)
 
-bert_indoorlocation_train_with_label()
+# bert_indoorlocation_train_with_label()
 
+run_experiment_different_label_rate()

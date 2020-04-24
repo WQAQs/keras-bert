@@ -42,6 +42,7 @@ warmup_steps = 10000
 weight_decay = 1e-3
 
 
+
 def bert_indoorlocation_pretrain():
     # x_train, y_train, _, _ = utils.get_data_from_sentence_pairs_for_pretrain(pretrain_train_datafile_path)
     # x_valid, y_valid, _, _ = utils.get_data_from_sentence_pairs_for_pretrain(pretrain_valid_datafile_path)

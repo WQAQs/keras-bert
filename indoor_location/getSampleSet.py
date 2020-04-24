@@ -15,13 +15,15 @@ allPointCsvRootDir = globalConfig.generate_sampleset_all_labeled_csv_dir  # 总�
 
 # dp.updateAllIbeaconDataSet(allPointCsvRootDir, ibeaconFilePath)  # 更新ibeaconDataSet
 
-dp.create_sample_dataset(allPointCsvRootDir)  # 创建样本集
+# dp.create_sample_dataset(allPointCsvRootDir)  # 创建样本集
 
 file1 = "./data/sampleset_data/new_3days1/train_dataset1.csv"
-file2 = "./data/sampleset_data/new_3days2/train_dataset1.csv"
-merged_file = "./data/sampleset_data/pretrain_dataset.csv"
+file2 = "./data/sampleset_data/new_3days1/valid_dataset1.csv"
+merged_file = "./data/sampleset_data/new_3days1/pretrain_dataset.csv"
 
 dp.merge_dataset(file1, file2, merged_file)
+
+
 
 # sample_dataset_file = ".\\data\\sampleset_data\\valid_dataset1.csv"
 # valid_dataset_file = ".\\data\\sampleset_data\\valid_dataset1.csv"
