@@ -26,9 +26,9 @@ seq_len = hp.seq_len
 # test_datafile_name = "..\\data\\sampleset_data\\sampleset_1days_21points_average_interval_500ms.csv"
 
 pretrain_train_datafile_path = "./data/sampleset_data/new_3days1/pretrain_dataset.csv"
-train_datafile_path = "./data/sampleset_data/new_3days1/valid_dataset1.csv"
+train_datafile_path = "./data/sampleset_data/new_3days1/train_dataset1.csv"
 valid_datafile_path = ".\\data\\sampleset_data\\7days\\valid_dataset1.csv"
-test_datafile_path = "./data/sampleset_data/new_3days2/train_dataset1.csv"
+test_datafile_path = "./data/sampleset_data/new_3days1/test_dataset1.csv"
 # \\1days\\sampleset_1days_20points_mac_rssi_word.csv
 # token_id_from_numerical_order_file_path = ".\\logs\\token_id_from_numerical_order.csv"
 # token_id_from_dataset_order_file_path = ".\\logs\\token_id_from_dataset__order1.csv"
@@ -52,7 +52,7 @@ trained_model_path = ".\\logs\\trained1_bert.h5"
 
 flag_retrain = False
 only_evaluate_history_model_flag = False
-LR = 0.05
+LR = 0.01
 EPOCHS = 100
 BATCH_SIZE = 128
 
